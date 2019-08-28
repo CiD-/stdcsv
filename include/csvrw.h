@@ -20,8 +20,6 @@
 
 #define CSVR_STD_QUALIFIERS     csvr_qualifiers == 2
 #define CSVR_NORMAL_OPEN        -2
-#define CSVR_CAT                1
-#define CSVR_CAT_ALL            2
 
 #define CSVW_STD_QUALIFIERS     csvw_qualifiers == 2
 
@@ -75,19 +73,15 @@ struct csv_field** csv_init();
  * Accessors
  */
 char* csvr_get_delim();
-char* csvr_get_filename();
-int csvr_get_filesleft();
 int csvr_get_allowstdchange();
 
 /**
  * Mutators
  */
-void csvr_set_cat(int cat);
 void csvr_set_delim(const char* delim);
 void csvr_set_qualifiers(int qualifiers);
 void csvr_set_normal(int normal);
 void csvr_set_internalbreak(const char* internalBreak);
-void csvw_set_inplaceedit(int ipe);
 void csvw_set_delim(const char* delim);
 void csvw_set_inplaceedit(int i);
 void csvw_set_qualifiers(int i);
@@ -102,12 +96,7 @@ void csvw_set_filename(const char* filename);
 /**
  *
  */
-void csvr_add_file(const char* fileName);
-
-/**
- *
- */
-int csvr_open_next();
+int csvr_open();
 
 /**
  *

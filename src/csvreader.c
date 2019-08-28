@@ -2,16 +2,13 @@
 
 static FILE* csvr_file = NULL;
 static char* csvr_fileName = NULL;
-static char** csvr_fileList = NULL;
-static int csvr_fileCount = 0;
-static int csvr_fileIndex = 0;
 static char* csvr_buffer = NULL;
-static int csvr_recordLen = 0;
-static int csvr_bufferSize = CSV_BUFFER_FACTOR;
 static char* csvr_append = NULL;
 static char* csvr_delim = NULL;
-static unsigned int csvr_delimlen = 0;
 static char* csvr_internalBreak = NULL;
+static int csvr_recordLen = 0;
+static int csvr_bufferSize = CSV_BUFFER_FACTOR;
+static unsigned int csvr_delimlen = 0;
 
 /* Statistics */
 static unsigned int csvr_rows = 0;
@@ -23,7 +20,6 @@ static int csvr_qualifiers = 2;
 static int csvr_allowStdChange = 1;
 static int csvr_normal = 0;
 static int csvr_normal_org = 0;
-static int csvr_cat = 0;
 
 /* Extra field hack */
 static int extraField = 0;
@@ -50,19 +46,9 @@ char* csvr_get_delim()
         return csvr_delim;
 }
 
-int csvr_get_filesleft()
-{
-        return csvr_fileCount - csvr_fileIndex;
-}
-
 int csvr_get_allowstdchange()
 {
         return csvr_allowStdChange;
-}
-
-void csvr_set_cat(int cat)
-{
-        csvr_cat = cat;
 }
 
 void csvr_set_delim(const char* delim)
@@ -85,19 +71,6 @@ void csvr_set_normal(int i)
 void csvr_set_internalbreak(const char* internalBreak)
 {
         STRDUP(internalBreak, csvr_internalBreak);
-}
-
-void csvr_add_file(const char* fileName)
-{
-        size_t arraySize = sizeof(char*) * ++csvr_fileCount;
-        if (csvr_fileList)
-                csvr_fileList = realloc(csvr_fileList, arraySize);
-        else
-                csvr_fileList = malloc(arraySize);
-
-        char* fileName_cpy = malloc(strlen(fileName) + 1);
-        strcpy(fileName_cpy, fileName);
-        csvr_fileList[csvr_fileCount-1] = fileName_cpy;
 }
 
 void csvr_lowerstandard()
@@ -142,12 +115,7 @@ void csvr_lowerstandard()
         --csvr_qualifiers;
         csvr_rows = 0;
         csvr_inLineBreaks = 0;
-        if (csvr_fileIndex > 1) {
-                csvr_fileIndex = 0;
-                csvr_open_next();
-        } else {
-                fseek(csvr_file, 0, SEEK_SET);
-        }
+        fseek(csvr_file, 0, SEEK_SET);
 }
 
 struct csv_field csvr_nextquoted(char** begin)
@@ -257,20 +225,13 @@ void csvr_getdelimiter(const char* header)
         csvr_delimlen = 1;
 }
 
-int csvr_open_next()
+int csvr_open(const char* fileName)
 {
+        //EXIT_IF(fclose(csvr_file) == EOF, NULL);
         csvr_rows = 0;
-        if (csvr_fileCount) {
-                if (csvr_file)
-                        EXIT_IF(fclose(csvr_file) == EOF, csvr_fileName);
-
-                if (csvr_fileCount > csvr_fileIndex) {
-                        csvr_fileName = csvr_fileList[csvr_fileIndex++];
-                        csvr_file = fopen(csvr_fileName, "r");
-                        EXIT_IF(!csvr_file, csvr_fileName);
-                } else {
-                        return 0;
-                }
+        if (fileName) {
+                csvr_file = fopen(fileName, "r");
+                EXIT_IF(!csvr_file, fileName);
         } else {
                 csvr_allowStdChange = 0;
                 csvr_file = stdin;
@@ -312,9 +273,7 @@ struct csv_field* csvr_getfields(struct csv_field* fields, int* count)
 
         *count = 0;
 
-        do
-                csvr_getline();
-        while(csvr_recordLen == EOF && csvr_cat && csvr_open_next());
+        csvr_getline();
 
         /* This can go away if we get rid of CSV_MAX_RECORD_SIZE */
         if (csvr_recordLen == -2) {
@@ -326,12 +285,7 @@ struct csv_field* csvr_getfields(struct csv_field* fields, int* count)
         if (csvr_recordLen == EOF) {
                 csvr_fieldCount = 0;
                 csvr_normal = csvr_normal_org;
-
-                if (csvr_fileIndex == csvr_fileCount) {
-                        //free(fields);
-                        //fields = NULL;
-                        csvr_destroy();
-                }
+                csvr_destroy();
                 return NULL;
         }
 
@@ -367,9 +321,6 @@ struct csv_field* csvr_getfields(struct csv_field* fields, int* count)
 
         if (csvr_normal == CSVR_NORMAL_OPEN)
                 csvr_normal = csvr_fieldCount;
-
-        if (csvr_cat == CSVR_CAT && !csvr_rows && csvr_fileIndex > 1)
-                *count = CSV_SKIP_LINE;
 
         ++csvr_rows;
 

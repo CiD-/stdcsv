@@ -1,5 +1,5 @@
 CC       := gcc
-CFLAGS 	 := -Wall -Wextra #-DTMPDIR='"/workspace/"'
+CFLAGS 	 := -Wall -Wextra
 LDFLAGS  :=
 BUILD    := ./build
 OBJ_DIR  := $(BUILD)/objects
