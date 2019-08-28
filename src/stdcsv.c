@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include "util.h"
-#include "csvrw.h"
-
+#include "csv.h"
+    
 static const char* helpString =
 "\nUsage: stdcsv [vhniqQxXS] [-N field_count] [-dD delimiter]"
 "\n       [-r new_line_replacement] [-o outputfile] input_file\n"
@@ -45,10 +45,10 @@ void parseargs(char c)
 {
         switch (c) {
         case 'c':
-                csvr_set_cat(CSVR_CAT);
+                //csvr_set_cat(CSVR_CAT);
                 break;
         case 'C':
-                csvr_set_cat(CSVR_CAT_ALL);
+                //csvr_set_cat(CSVR_CAT_ALL);
                 break;
         //case 'v': /* verbose */
         //        verbose = 1;
@@ -69,7 +69,7 @@ void parseargs(char c)
         }
                 break;
         case 'i': /* in-place-edit */
-                csvw_set_inplaceedit(1);
+                //csvw_set_inplaceedit(1);
                 break;
         case 'q': /* suppress-qualifiers */
                 csvw_set_qualifiers(0);
@@ -146,18 +146,19 @@ int main (int argc, char **argv)
                                   long_options, &option_index)) != -1)
                 parseargs(c);
 
-        while (optind < argc)
-                csvr_add_file(argv[optind++]);
+        do {
+                if (optind == argc)
+                        csvr_open(NULL);
+                else
+                        csvr_open(argv[optind++]);
 
-        struct csv_field* fields = NULL;
-        int fieldCount = 0;
+                struct csv_record rec = {NULL, 0};
 
-        while (csvr_open_next()) {
                 csvw_open();
-                while ( (fields = csvr_getfields(fields, &fieldCount)) )
-                        csvw_writeline_d(fields, fieldCount, csvr_get_delim());
+                while (csvr_get_record(&rec))
+                        csvw_writeline_d(&rec, csvr_get_delim());
                 csvw_close();
-        }
+        } while (optind < argc);
 
         return 0;
 }

@@ -35,13 +35,13 @@
 /* Structure containing and individual field */
 struct csv_field {
         const char* begin;
-        size_t size;
+        size_t length;
 };
 
 /* Structure containing dynamic array of fields */
 struct csv_record {
         struct csv_field* fields;
-        uint size;
+        int fieldCount;
 };
 
 /**
@@ -60,13 +60,13 @@ char* csv_newstring(struct csv_field s);
  * the field. This char* should already be allocated.
  * If strncpy fails, return -1
  */
-int csv_getstring(struct csv_field s, char* buffer);
+int csv_get_string(struct csv_field s, char* buffer);
 
 /**
  * Initializes and returns a dynamic array of
  * pointers to struct csv_field
  */
-struct csv_field** csv_init();
+//struct csv_field** csv_init();
 
 
 /**
@@ -136,17 +136,7 @@ struct csv_field csvr_nextquoted(char** begin);
  *        represents the parsed fields from the next line.
  *      - NULL if EOF
  */
-struct csv_field* csvr_getfields(struct csv_field* fields, int* fieldCount);
-
-/**
- * csvr_growfields allocates the initial memory for a
- * struct csv_field. It also reallocs an additional field
- * if fields is already allocated a pointer.
- *
- * Returns:
- *      - pointer to newly/re allocated struct csv_field*
- */
-struct csv_field* csvr_growfields(struct csv_field* fields);
+int csvr_get_record(struct csv_record *rec);
 
 /**
  * Buffers for reading and appending are allocated here.
@@ -157,6 +147,14 @@ void csvr_init();
  * Free all heap memory.
  */
 void csvr_destroy();
+
+/**
+ * csvr_growrecord allocates the initial memory for a
+ * struct csv_field. It also reallocs an additional fields
+ * if fields is already allocated a pointer.
+ */
+void csvr_growrecord(struct csv_record *record);
+
 
 /**
  * csvw_init opens a temp file for writing if input is from a file.
@@ -181,11 +179,11 @@ void csvw_close();
  * wrapper for csvw_writeline with extra field for delimiter. if csvw_delim
  * is not defined, we set it equal to the provided delim.
  */
-void csvw_writeline_d(struct csv_field* fields, int fieldCount, char* delim);
+void csvw_writeline_d(struct csv_record* rec, char* delim);
 
 /**
  * Loop through array of struct csv_field, and print the line to csvw_file.
  */
-void csvw_writeline(struct csv_field* fields, int fieldCount);
+void csvw_writeline(struct csv_record* rec);
 
 #endif

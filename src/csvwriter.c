@@ -1,4 +1,4 @@
-#include "csvrw.h"
+#include "csv.h"
 
 static char csvw_fileName[PATH_MAX] = "";
 static char csvw_fileName_org[PATH_MAX] = "";
@@ -63,31 +63,28 @@ void csvw_reset()
         EXIT_IF(!csvw_file, csvw_tempname);
 }
 
-void csvw_writeline_d(struct csv_field* fields, int fieldCount, char* delim)
+void csvw_writeline_d(struct csv_record* rec, char* delim)
 {
         if (!csvw_delim && delim)
                 csvw_set_delim(delim);
 
-        csvw_writeline(fields, fieldCount);
+        csvw_writeline(rec);
 }
 
-void csvw_writeline(struct csv_field* fields, int fieldCount)
+void csvw_writeline(struct csv_record* rec)
 {
-        if (fieldCount == CSV_SKIP_LINE)
-                return;
-
         int i = 0;
         unsigned int j = 0;
         int writer = 0;
         int quotes = 0;
         int delimI = 0;
         char c = 0;
-        for (i = 0; i < fieldCount; ++i) {
+        for (i = 0; i < rec->fieldCount; ++i) {
                 quotes = 0;
                 writer = 0;
                 /* TODO - up front size check. */
-                for (j = 0; j < fields[i].size; ++j) {
-                        c = fields[i].begin[j];
+                for (j = 0; j < rec->fields[i].length; ++j) {
+                        c = rec->fields[i].begin[j];
                         csvw_buffer[writer++] = c;
                         if (c == '"' && CSVW_STD_QUALIFIERS) {
                                 csvw_buffer[writer++] = '"';
@@ -113,7 +110,7 @@ void csvw_writeline(struct csv_field* fields, int fieldCount)
                 else
                         fputs(csvw_buffer, csvw_file);
 
-                if (i != fieldCount - 1)
+                if (i != rec->fieldCount - 1)
                         fputs(csvw_delim, csvw_file);
         }
         fputs(csvw_lineEnding, csvw_file);

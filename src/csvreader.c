@@ -1,4 +1,4 @@
-#include "csvrw.h"
+#include "csv.h"
 
 static FILE* csvr_file = NULL;
 static char* csvr_fileName = NULL;
@@ -13,7 +13,7 @@ static unsigned int csvr_delimlen = 0;
 /* Statistics */
 static unsigned int csvr_rows = 0;
 static unsigned int csvr_inLineBreaks = 0;
-static int csvr_fieldCount = 0;
+static int csvr_recordSize = 0;
 
 /* Flags */
 static int csvr_qualifiers = 2;
@@ -166,7 +166,7 @@ struct csv_field csvr_nextquoted(char** begin)
         }
 
         field.begin = *begin + 1;
-        field.size = (delimI == csvr_delimlen) ? i - 2 - csvr_delimlen : i - 2;
+        field.length = (delimI == csvr_delimlen) ? i - 2 - csvr_delimlen : i - 2;
 
         /* Hack for case when last character is delimiter. */
         if ((*begin)[i] == '\0' && delimI == csvr_delimlen) {
@@ -193,7 +193,7 @@ struct csv_field csvr_nextfield(char** begin)
         }
 
         field.begin = *begin;
-        field.size = (delimI == csvr_delimlen) ? i - csvr_delimlen : i;
+        field.length = (delimI == csvr_delimlen) ? i - csvr_delimlen : i;
 
         /* Hack for case when last character is delimiter. */
         if ((*begin)[i] == '\0' && delimI == csvr_delimlen) {
@@ -266,12 +266,12 @@ void csvr_getline()
                 csvr_recordLen += len;
 }
 
-struct csv_field* csvr_getfields(struct csv_field* fields, int* count)
+int csvr_get_record(struct csv_record* rec)
 {
         if (!csvr_buffer)
                 csvr_init();
 
-        *count = 0;
+        int fieldIndex = 0;
 
         csvr_getline();
 
@@ -283,48 +283,50 @@ struct csv_field* csvr_getfields(struct csv_field* fields, int* count)
         }
 
         if (csvr_recordLen == EOF) {
-                csvr_fieldCount = 0;
+                csvr_recordSize = 0;
                 csvr_normal = csvr_normal_org;
                 csvr_destroy();
-                return NULL;
+                return FALSE;
         }
 
         char* pBuffer = csvr_buffer;
 
-        if (!csvr_delim && !csvr_fieldCount)
+        if (!csvr_delim && !csvr_recordSize)
                 csvr_getdelimiter(pBuffer);
 
         while(pBuffer[0] != '\0') {
-                if (++(*count) > csvr_fieldCount)
-                        fields = csvr_growfields(fields);
+                if (++(fieldIndex) > csvr_recordSize)
+                        csvr_growrecord(rec);
                 if (csvr_qualifiers && pBuffer[0] == '"')
-                        fields[*count-1] = csvr_nextquoted(&pBuffer);
+                        rec->fields[fieldIndex-1] = csvr_nextquoted(&pBuffer);
                 else
-                        fields[*count-1] = csvr_nextfield(&pBuffer);
+                        rec->fields[fieldIndex-1] = csvr_nextfield(&pBuffer);
 
-                if (!fields[*count-1].begin) {
+                if (!rec->fields[fieldIndex-1].begin) {
                         csvr_lowerstandard();
-                        *count = CSV_RESET;
-                        return fields;
+                        rec->fieldCount = CSV_RESET;
+                        return TRUE;
                 }
         }
 
         if (csvr_normal > 0) {
                 /* Append fields if we are short */
-                while (csvr_normal > *count) {
-                        if (++(*count) > csvr_fieldCount)
-                                fields = csvr_growfields(fields);
-                        fields[*count-1].size = 0;
+                while (csvr_normal > fieldIndex) {
+                        if (++(fieldIndex) > csvr_recordSize)
+                                csvr_growrecord(rec);
+                        rec->fields[fieldIndex-1].length = 0;
                 }
-                *count = csvr_normal;
+                fieldIndex = csvr_normal;
         }
 
         if (csvr_normal == CSVR_NORMAL_OPEN)
-                csvr_normal = csvr_fieldCount;
+                csvr_normal = csvr_recordSize;
 
         ++csvr_rows;
 
-        return fields;
+        rec->fieldCount = fieldIndex;
+
+        return TRUE;
 }
 
 void csvr_init()
@@ -356,3 +358,16 @@ void csvr_destroy()
         FREE(csvr_buffer);
         FREE(csvr_append);
 }
+
+void csvr_growrecord(struct csv_record *record)
+{
+        ++csvr_recordSize;
+        uint arraySize = csvr_recordSize * sizeof(struct csv_field);
+        if (csvr_recordSize > 1)
+                record->fields = realloc(record->fields, arraySize);
+        else
+                record->fields = malloc(arraySize);
+
+        EXIT_IF(!record->fields, "fields allocation");
+}
+

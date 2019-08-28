@@ -1,42 +1,30 @@
-#include "csvrw.h"
+#include "csv.h"
 
 const char* csv_get_end(struct csv_field s)
 {
-        return s.begin + s.size;
+        return s.begin + s.length;
 }
 
 char* csv_newstring(struct csv_field s)
 {
-        char* newString = malloc(s.size + 1);
-        csv_getstring(s, newString);
+        char* newString = malloc(s.length + 1);
+        csv_get_string(s, newString);
         return newString;
 }
 
-int csv_getstring(struct csv_field s, char* buffer)
+int csv_get_string(struct csv_field s, char* buffer)
 {
-        char* dest = strncpy(buffer, s.begin, s.size);
+        char* dest = strncpy(buffer, s.begin, s.length);
         if(!dest)
                 return -1;
-        buffer[s.size] = '\0';
+        buffer[s.length] = '\0';
         return 0;
-}
-
-void csv_growrecord(struct csv_record *record)
-{
-        ++record->size;
-        uint arraySize = record->size * sizeof(struct csv_field);
-        if (record->size > 1)
-                record->fields = realloc(record->fields, arraySize);
-        else
-                record->fields = malloc(arraySize);
-
-        EXIT_IF(!record->fields, "fields allocation");
 }
 
 void csv_destroyrecord(struct csv_record *record)
 {
-        FREE(record);
-        record->size = 0;
+        FREE(record->fields);
+        //record->size = 0;
 }
 
 /*
