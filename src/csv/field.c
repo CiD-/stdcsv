@@ -1,5 +1,7 @@
 #include "csv.h"
 
+const struct csv_record blank_record = {NULL, 0, 0};
+
 const char* csv_get_end(struct csv_field s)
 {
         return s.begin + s.length;
@@ -7,7 +9,8 @@ const char* csv_get_end(struct csv_field s)
 
 char* csv_newstring(struct csv_field s)
 {
-        char* newString = malloc(s.length + 1);
+        char* newString = NULL;
+        MALLOC(newString, s.length + 1);
         csv_get_string(s, newString);
         return newString;
 }

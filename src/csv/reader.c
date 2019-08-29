@@ -1,11 +1,10 @@
 #include "csv.h"
 
 static FILE* csvr_file = NULL;
-static char* csvr_fileName = NULL;
 static char* csvr_buffer = NULL;
-static char* csvr_append = NULL;
-static char* csvr_delim = NULL;
-static char* csvr_internalBreak = NULL;
+static char csvr_append[CSV_BUFFER_FACTOR];
+static char csvr_delim[32] = "\0";
+static char csvr_internalBreak[32] = "\n";
 static int csvr_recordLen = 0;
 static int csvr_bufferSize = CSV_BUFFER_FACTOR;
 static unsigned int csvr_delimlen = 0;
@@ -13,7 +12,6 @@ static unsigned int csvr_delimlen = 0;
 /* Statistics */
 static unsigned int csvr_rows = 0;
 static unsigned int csvr_inLineBreaks = 0;
-static int csvr_recordSize = 0;
 
 /* Flags */
 static int csvr_qualifiers = 2;
@@ -36,11 +34,6 @@ static sigset_t vg_shutup = { {0} };
  */
 void csvr_getdelimiter(const char* header);
 
-char* csvr_get_filename()
-{
-        return csvr_fileName;
-}
-
 char* csvr_get_delim()
 {
         return csvr_delim;
@@ -53,8 +46,7 @@ int csvr_get_allowstdchange()
 
 void csvr_set_delim(const char* delim)
 {
-        STRDUP(delim, csvr_delim);
-        csvr_delimlen = strlen(csvr_delim);
+        STRNCPY(csvr_delim, delim, 32);
 }
 
 void csvr_set_qualifiers(int i)
@@ -70,7 +62,7 @@ void csvr_set_normal(int i)
 
 void csvr_set_internalbreak(const char* internalBreak)
 {
-        STRDUP(internalBreak, csvr_internalBreak);
+        STRNCPY(csvr_internalBreak, internalBreak, 32);
 }
 
 void csvr_lowerstandard()
@@ -79,14 +71,12 @@ void csvr_lowerstandard()
                 switch(csvr_qualifiers) {
                 case 1:
                         fprintf(stderr,
-                                "Line %d: Qualifier issue."
-                                "Try option --ignore-quotes \n",
+                                "Line %d: Qualifier issue.\n",
                                 1 + csvr_rows + csvr_inLineBreaks);
                         break;
                 case 2:
                         fprintf(stderr,
-                                "Line %d: RFC4180 Qualifier issue."
-                                "Try option --no-rfc4180-in\n",
+                                "Line %d: RFC4180 Qualifier issue.\n",
                                 1 + csvr_rows + csvr_inLineBreaks);
                         break;
                 default:
@@ -118,17 +108,46 @@ void csvr_lowerstandard()
         fseek(csvr_file, 0, SEEK_SET);
 }
 
+void csvr_increasebuffer()
+{
+        static int bufferCoef = 1;
+        csvr_bufferSize = ++bufferCoef * CSV_BUFFER_FACTOR;
+        REALLOC(csvr_buffer, csvr_bufferSize);
+}
+
+void csvr_appendlines()
+{
+        int offset = 0;
+        do {
+                offset = csvr_bufferSize;
+                csvr_increasebuffer();
+                csvr_recordLen = safegetline(csvr_file, csvr_append
+                                             ,CSV_BUFFER_FACTOR);
+                strcat(csvr_buffer, csvr_append);
+        } while (csvr_recordLen == -2 && csvr_bufferSize < CSV_MAX_RECORD_SIZE);
+
+        if (csvr_recordLen > 0)
+                csvr_recordLen += offset;
+}
+
+void csvr_getline()
+{
+        csvr_recordLen = safegetline(csvr_file, csvr_buffer, csvr_bufferSize);
+        if (csvr_recordLen == -2 && csvr_bufferSize < CSV_MAX_RECORD_SIZE)
+                csvr_appendlines();
+}
+
 struct csv_field csvr_nextquoted(char** begin)
 {
         unsigned int delimI = 0;
-        unsigned int quoteI = 0;
+        unsigned int onQualifier = 0;
         unsigned int i = 1;
 
         struct csv_field field = {NULL, 0};
 
         while (1) {
                 for (; (*begin)[i] != '\0' && delimI != csvr_delimlen; ++i) {
-                        if (quoteI) {
+                        if (onQualifier) {
                                 if ((*begin)[i] == csvr_delim[delimI]) {
                                         ++delimI;
                                 }
@@ -136,7 +155,7 @@ struct csv_field csvr_nextquoted(char** begin)
                                         if(CSVR_STD_QUALIFIERS) {
                                                 if (delimI)
                                                         return field;
-                                                quoteI = 0;
+                                                onQualifier = FALSE;
                                                 removecharat(*begin, i);
                                         }
                                 }
@@ -145,19 +164,23 @@ struct csv_field csvr_nextquoted(char** begin)
                                 }
                                 else {
                                         delimI = 0;
-                                        quoteI = 0;
+                                        onQualifier = FALSE;
                                 }
                         } else {
-                                quoteI = ((*begin)[i] == '"') ? 1 : 0;
+                                onQualifier = ((*begin)[i] == '"');
                         }
                 }
-                if ((*begin)[i] == '\0' && !quoteI) {
+                if ((*begin)[i] == '\0' && !onQualifier) {
                         int newLineLen = strlen(csvr_internalBreak);
-                        int n = csvr_bufferSize - csvr_recordLen - newLineLen;
-                        csvr_recordLen = safegetline(csvr_file, csvr_append, n);
-                        if (csvr_recordLen == EOF || csvr_recordLen == -2)
-                                return field;
+                        if (newLineLen + csvr_recordLen >= csvr_bufferSize)
+                                csvr_increasebuffer();
+
                         strcat(csvr_buffer, csvr_internalBreak);
+                        //int n = csvr_bufferSize - csvr_recordLen - newLineLen;
+                        //csvr_recordLen = safegetline(csvr_file, csvr_append, n);
+                        csvr_appendlines();
+                        if (csvr_recordLen == EOF) /** TODO **/
+                                return field;
                         strcat(csvr_buffer, csvr_append);
                         ++csvr_inLineBreaks;
                         continue;
@@ -207,7 +230,7 @@ struct csv_field csvr_nextfield(char** begin)
 
 void csvr_getdelimiter(const char* header)
 {
-        char* delims = ",|\t";
+        const char* delims = ",|\t";
         int i = 0;
         int sel = 0;
         int count = 0;
@@ -219,10 +242,70 @@ void csvr_getdelimiter(const char* header)
                         maxCount = count;
                 }
         }
-        csvr_delim = malloc(2);
+        //csvr_delim = malloc(2);
         csvr_delim[0] = delims[sel];
         csvr_delim[1] = '\0';
         csvr_delimlen = 1;
+}
+
+int csvr_get_record(struct csv_record* rec)
+{
+        int fieldIndex = 0;
+
+        csvr_getline();
+
+        /* This can go away if we get rid of CSV_MAX_RECORD_SIZE */
+        if (csvr_recordLen == -2) {
+                fprintf(stderr,"Buffer overflow on line %d.\n",
+                                csvr_rows + csvr_inLineBreaks);
+                exit(EXIT_FAILURE);
+        }
+
+        if (csvr_recordLen == EOF) {
+                rec->_allocated_size = 0;
+                csvr_normal = csvr_normal_org;
+                csvr_destroy();
+                return FALSE;
+        }
+
+        char* pBuffer = csvr_buffer;
+
+        if (!*csvr_delim && !rec->_allocated_size)
+                csvr_getdelimiter(pBuffer);
+
+        while(pBuffer[0] != '\0') {
+                if (++(fieldIndex) > rec->_allocated_size)
+                        csvr_growrecord(rec);
+                if (csvr_qualifiers && pBuffer[0] == '"')
+                        rec->fields[fieldIndex-1] = csvr_nextquoted(&pBuffer);
+                else
+                        rec->fields[fieldIndex-1] = csvr_nextfield(&pBuffer);
+
+                if (!rec->fields[fieldIndex-1].begin) {
+                        csvr_lowerstandard();
+                        rec->size = CSV_RESET;
+                        return TRUE;
+                }
+        }
+
+        if (csvr_normal > 0) {
+                /* Append fields if we are short */
+                while (csvr_normal > fieldIndex) {
+                        if (++(fieldIndex) > rec->_allocated_size)
+                                csvr_growrecord(rec);
+                        rec->fields[fieldIndex-1].length = 0;
+                }
+                fieldIndex = csvr_normal;
+        }
+
+        if (csvr_normal == CSVR_NORMAL_OPEN)
+                csvr_normal = rec->_allocated_size;
+
+        ++csvr_rows;
+
+        rec->size = fieldIndex;
+
+        return TRUE;
 }
 
 int csvr_open(const char* fileName)
@@ -242,103 +325,15 @@ int csvr_open(const char* fileName)
         return 1;
 }
 
-void csvr_getline()
+void csvr_init(const char* fileName)
 {
-        static int bufferCoef = 1;
-        int len = 0;
+        csvr_open(fileName);
 
-        csvr_recordLen = safegetline(csvr_file, csvr_buffer, csvr_bufferSize);
+        MALLOC(csvr_buffer, CSV_BUFFER_FACTOR);
+        //csvr_append = MALLOC(CSV_BUFFER_FACTOR);
 
-        while (csvr_recordLen == -2 && csvr_bufferSize < CSV_MAX_RECORD_SIZE) {
-                len = csvr_bufferSize;
-                csvr_bufferSize = ++bufferCoef * CSV_BUFFER_FACTOR;
-                csvr_buffer = realloc(csvr_buffer, csvr_bufferSize);
-                EXIT_IF(!csvr_buffer, "Buffer realloc");
-                csvr_append = realloc(csvr_append, csvr_bufferSize);
-                EXIT_IF(!csvr_buffer, "Append realloc");
-
-                csvr_recordLen = safegetline(csvr_file, csvr_append
-                                             ,CSV_BUFFER_FACTOR);
-                strcat(csvr_buffer, csvr_append);
-        }
-
-        if (csvr_recordLen > 0)
-                csvr_recordLen += len;
-}
-
-int csvr_get_record(struct csv_record* rec)
-{
-        if (!csvr_buffer)
-                csvr_init();
-
-        int fieldIndex = 0;
-
-        csvr_getline();
-
-        /* This can go away if we get rid of CSV_MAX_RECORD_SIZE */
-        if (csvr_recordLen == -2) {
-                fprintf(stderr,"Buffer overflow on line %d.\n",
-                                csvr_rows + csvr_inLineBreaks);
-                exit(EXIT_FAILURE);
-        }
-
-        if (csvr_recordLen == EOF) {
-                csvr_recordSize = 0;
-                csvr_normal = csvr_normal_org;
-                csvr_destroy();
-                return FALSE;
-        }
-
-        char* pBuffer = csvr_buffer;
-
-        if (!csvr_delim && !csvr_recordSize)
-                csvr_getdelimiter(pBuffer);
-
-        while(pBuffer[0] != '\0') {
-                if (++(fieldIndex) > csvr_recordSize)
-                        csvr_growrecord(rec);
-                if (csvr_qualifiers && pBuffer[0] == '"')
-                        rec->fields[fieldIndex-1] = csvr_nextquoted(&pBuffer);
-                else
-                        rec->fields[fieldIndex-1] = csvr_nextfield(&pBuffer);
-
-                if (!rec->fields[fieldIndex-1].begin) {
-                        csvr_lowerstandard();
-                        rec->fieldCount = CSV_RESET;
-                        return TRUE;
-                }
-        }
-
-        if (csvr_normal > 0) {
-                /* Append fields if we are short */
-                while (csvr_normal > fieldIndex) {
-                        if (++(fieldIndex) > csvr_recordSize)
-                                csvr_growrecord(rec);
-                        rec->fields[fieldIndex-1].length = 0;
-                }
-                fieldIndex = csvr_normal;
-        }
-
-        if (csvr_normal == CSVR_NORMAL_OPEN)
-                csvr_normal = csvr_recordSize;
-
-        ++csvr_rows;
-
-        rec->fieldCount = fieldIndex;
-
-        return TRUE;
-}
-
-void csvr_init()
-{
-        csvr_buffer = malloc(CSV_BUFFER_FACTOR);
-        EXIT_IF(!csvr_buffer, "csvr_buffer malloc");
-
-        csvr_append = malloc(CSV_BUFFER_FACTOR);
-        EXIT_IF(!csvr_append, "csvr_append malloc");
-
-        if (!csvr_internalBreak)
-                STRDUP("\n", csvr_internalBreak);
+        //if (!csvr_internalBreak)
+        //        STRDUP("\n", csvr_internalBreak);
 
         /** Attach signal handlers **/
         act.sa_mask = vg_shutup;
@@ -353,21 +348,20 @@ void csvr_init()
 
 void csvr_destroy()
 {
-        FREE(csvr_delim);
-        FREE(csvr_internalBreak);
+        //FREE(csvr_delim);
+        //FREE(csvr_internalBreak);
         FREE(csvr_buffer);
-        FREE(csvr_append);
+        //FREE(csvr_append);
 }
 
-void csvr_growrecord(struct csv_record *record)
+void csvr_growrecord(struct csv_record *rec)
 {
-        ++csvr_recordSize;
-        uint arraySize = csvr_recordSize * sizeof(struct csv_field);
-        if (csvr_recordSize > 1)
-                record->fields = realloc(record->fields, arraySize);
-        else
-                record->fields = malloc(arraySize);
-
-        EXIT_IF(!record->fields, "fields allocation");
+        ++rec->_allocated_size;
+        uint arraySize = rec->_allocated_size * sizeof(struct csv_field);
+        if (rec->_allocated_size > 1) {
+                REALLOC(rec->fields, arraySize);
+        } else {
+                MALLOC(rec->fields, arraySize);
+        }
 }
 

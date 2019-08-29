@@ -3,7 +3,7 @@
 #include <getopt.h>
 #include "util.h"
 #include "csv.h"
-    
+
 static const char* helpString =
 "\nUsage: stdcsv [vhniqQxXS] [-N field_count] [-dD delimiter]"
 "\n       [-r new_line_replacement] [-o outputfile] input_file\n"
@@ -148,11 +148,11 @@ int main (int argc, char **argv)
 
         do {
                 if (optind == argc)
-                        csvr_open(NULL);
+                        csvr_init(NULL);
                 else
-                        csvr_open(argv[optind++]);
+                        csvr_init(argv[optind++]);
 
-                struct csv_record rec = {NULL, 0};
+                struct csv_record rec = blank_record;
 
                 csvw_open();
                 while (csvr_get_record(&rec))

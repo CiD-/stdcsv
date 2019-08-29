@@ -32,7 +32,7 @@
 #include <signal.h>
 #include "util.h"
 
-/* Structure containing and individual field */
+/* Structure containing an individual field */
 struct csv_field {
         const char* begin;
         size_t length;
@@ -41,8 +41,11 @@ struct csv_field {
 /* Structure containing dynamic array of fields */
 struct csv_record {
         struct csv_field* fields;
-        int fieldCount;
+        int size;
+        int _allocated_size;
 };
+
+extern const struct csv_record blank_record;
 
 /**
  * Return char* to end of field
@@ -96,11 +99,6 @@ void csvw_set_filename(const char* filename);
 /**
  *
  */
-int csvr_open();
-
-/**
- *
- */
 void csvw_open();
 
 /**
@@ -139,9 +137,14 @@ struct csv_field csvr_nextquoted(char** begin);
 int csvr_get_record(struct csv_record *rec);
 
 /**
+ *
+ */
+//int csvr_open(const char* fileName);
+
+/**
  * Buffers for reading and appending are allocated here.
  */
-void csvr_init();
+void csvr_init(const char* fileName);
 
 /**
  * Free all heap memory.
@@ -168,7 +171,7 @@ void csvw_init();
 /**
  * Relese allocated heap resources
  */
-void csvw_destroy();
+//void csvw_destroy();
 
 /**
  * Dump temp file to destination file/stdout

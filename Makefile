@@ -61,7 +61,7 @@ install_lib: $(LIB_DIR)$(LIB_TARGET)
 
 install_bin: $(APP_DIR)$(TARGET)
 	install -d $(PREFIX)/bin/
-	install -m 644 $(APP_DIR)$(TARGET) $(PREFIX)/bin/
+	install -m 755 $(APP_DIR)$(TARGET) $(PREFIX)/bin/
 
 clean:
 	-@rm -rvf $(APP_DIR)*

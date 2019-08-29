@@ -6,8 +6,8 @@ static char csvw_tempname[PATH_MAX] = "";
 static char csvw_tempdir[PATH_MAX-10] = "";
 static FILE* csvw_file = NULL;
 static int csvw_fileIndex = 1;
-static char* csvw_buffer = NULL;
-static char* csvw_delim = NULL;
+static char csvw_buffer[CSV_MAX_FIELD_SIZE];
+static char csvw_delim[32] = "";
 static int csvw_delimlen = 0;
 static char csvw_lineEnding[3] = "\n";
 
@@ -22,7 +22,7 @@ void csvw_reset();
 
 void csvw_set_delim(const char* delim)
 {
-        STRDUP(delim, csvw_delim);
+        STRNCPY(csvw_delim, delim, 32);
         csvw_delimlen = strlen(csvw_delim);
 }
 
@@ -40,8 +40,8 @@ void csvw_set_lineending(const char* lineEnding)
 
 void csvw_set_filename(const char* filename)
 {
-        strncpy(csvw_fileName_org, filename, PATH_MAX);
-        strncpy(csvw_fileName, filename, PATH_MAX);
+        STRNCPY(csvw_fileName_org, filename, PATH_MAX);
+        STRNCPY(csvw_fileName, filename, PATH_MAX);
 }
 
 void csvw_set_inplaceedit(int ipe)
@@ -53,7 +53,7 @@ void csvw_reset()
 {
         if (csvw_fileName[0]) {
                 csvw_fileIndex = 1;
-                strncpy(csvw_fileName, csvw_fileName_org, PATH_MAX);
+                STRNCPY(csvw_fileName, csvw_fileName_org, PATH_MAX);
         }
 
         EXIT_IF(fclose(csvw_file) == EOF, csvw_tempname);
@@ -65,7 +65,7 @@ void csvw_reset()
 
 void csvw_writeline_d(struct csv_record* rec, char* delim)
 {
-        if (!csvw_delim && delim)
+        if (!*csvw_delim && delim)
                 csvw_set_delim(delim);
 
         csvw_writeline(rec);
@@ -79,7 +79,7 @@ void csvw_writeline(struct csv_record* rec)
         int quotes = 0;
         int delimI = 0;
         char c = 0;
-        for (i = 0; i < rec->fieldCount; ++i) {
+        for (i = 0; i < rec->size; ++i) {
                 quotes = 0;
                 writer = 0;
                 /* TODO - up front size check. */
@@ -110,7 +110,7 @@ void csvw_writeline(struct csv_record* rec)
                 else
                         fputs(csvw_buffer, csvw_file);
 
-                if (i != rec->fieldCount - 1)
+                if (i != rec->size - 1)
                         fputs(csvw_delim, csvw_file);
         }
         fputs(csvw_lineEnding, csvw_file);
@@ -171,21 +171,19 @@ void csvw_init()
          * This can be defined during compilation.
          */
         if (stats.f_bsize * stats.f_bavail < MIN_SPACE_AVAILABLE)
-                strncpy(csvw_tempdir, TMPDIR_STR, PATH_MAX);
+                STRNCPY(csvw_tempdir, TMPDIR_STR, PATH_MAX);
 
-        if (!csvw_buffer) {
-                csvw_buffer = malloc(CSV_MAX_FIELD_SIZE);
-                EXIT_IF(!csvw_buffer, "csvw_buffer malloc error");
-        }
+        //if (!csvw_buffer) {
+        //        MALLOC(csvw_buffer, CSV_MAX_FIELD_SIZE);
+        //}
 }
 
 void csvw_open()
 {
-        if (!csvw_buffer)
-                csvw_init();
+        csvw_init();
 
         if (csvr_get_allowstdchange()) {
-                strncpy(csvw_tempname, csvw_tempdir, PATH_MAX - 10);
+                STRNCPY(csvw_tempname, csvw_tempdir, PATH_MAX - 10);
                 strcat(csvw_tempname, "csv_XXXXXX");
                 int fd = mkstemp(csvw_tempname);
                 set_tempoutputfile(csvw_tempname);
@@ -196,10 +194,10 @@ void csvw_open()
         }
 }
 
-void csvw_destroy()
-{
-        FREE(csvw_delim);
-        FREE(csvw_buffer);
-}
+//void csvw_destroy()
+//{
+//        //FREE(csvw_delim);
+//        //FREE(csvw_buffer);
+//}
 
 

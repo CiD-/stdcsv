@@ -17,7 +17,7 @@
 #define EXIT_IF(condition, errormsg) {  \
         if (condition) {                \
                 perror(errormsg);       \
-                cleanexit();             \
+                cleanexit();            \
         }                               \
 }
 
@@ -28,7 +28,18 @@
         dest = malloc(size);            \
         if (!dest) {                    \
                 perror("malloc");       \
-                cleanexit();             \
+                cleanexit();            \
+        }                               \
+}
+
+/**
+ * realloc wrapper that does error checking
+ */
+#define REALLOC(dest, size) {           \
+        dest = realloc(dest, size);     \
+        if (!dest) {                    \
+                perror("realloc");      \
+                cleanexit();            \
         }                               \
 }
 
@@ -46,6 +57,12 @@
                 cleanexit();                                            \
         }                                                               \
 }
+
+#define STRNCPY(dest, src, n) {         \
+        strncpy(dest, src, n-1);        \
+        dest[n-1] = '\0';               \
+}
+
 
 /**
  * Free pointer if not NULL and set to NULL
