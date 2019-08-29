@@ -1,5 +1,4 @@
 PREFIX		?= /usr/local
-DESTDIR		?=
 
 CC       	:= gcc
 CFLAGS 	 	+= -Wall -Wextra
@@ -55,14 +54,14 @@ release: all
 install: install_lib install_bin
 
 install_lib: $(LIB_DIR)$(LIB_TARGET)
-	install -d $(DESTDIR)$(PREFIX)/lib/
-	install -m 644 $(LIB_DIR)$(LIB_TARGET) $(DESTDIR)$(PREFIX)/lib/
-	install -d $(DESTDIR)$(PREFIX)/include/
-	install -m 644 include/csv.h $(DESTDIR)$(PREFIX)/include/
+	install -d $(PREFIX)/lib/
+	install -m 644 $(LIB_DIR)$(LIB_TARGET) $(PREFIX)/lib/
+	install -d $(PREFIX)/include/
+	install -m 644 include/csv.h $(PREFIX)/include/
 
 install_bin: $(APP_DIR)$(TARGET)
-	install -d $(DESTDIR)$(PREFIX)/bin/
-	install -m 644 $(APP_DIR)$(TARGET) $(DESTDIR)$(PREFIX)/bin/
+	install -d $(PREFIX)/bin/
+	install -m 644 $(APP_DIR)$(TARGET) $(PREFIX)/bin/
 
 clean:
 	-@rm -rvf $(APP_DIR)*
