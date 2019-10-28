@@ -42,7 +42,7 @@ struct csv_field {
 struct csv_record {
         struct csv_field* fields;
         int size;
-        int _allocated_size;
+        void* _internal;
 };
 
 extern const struct csv_record blank_record;
