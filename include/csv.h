@@ -38,32 +38,37 @@ struct csv_field {
         size_t length;
 };
 
+/* Forward declaration of internal structure */
+struct csv_internal;
+
 /* Structure containing dynamic array of fields */
 struct csv_record {
         struct csv_field* fields;
         int size;
-        void* _internal;
+        struct csv_internal* _internal;
 };
 
 extern const struct csv_record blank_record;
 
+/** csv_field **/
+
 /**
  * Return char* to end of field
  */
-const char* csv_get_end(struct csv_field s);
+const char* csv_get_end(struct csv_field* s);
 
 /**
  * Provide dynamically allocated char*
  * copy of the field
  */
-char* csv_newstring(struct csv_field s);
+char* csv_newstring(struct csv_field* s);
 
 /**
  * Assigns buffer to a copy of the data within
  * the field. This char* should already be allocated.
  * If strncpy fails, return -1
  */
-int csv_get_string(struct csv_field s, char* buffer);
+int csv_get_string(struct csv_field* s, char* buffer);
 
 /**
  * Initializes and returns a dynamic array of
@@ -72,34 +77,29 @@ int csv_get_string(struct csv_field s, char* buffer);
 //struct csv_field** csv_init();
 
 
+/** csv_reader **/
+
 /**
  * Accessors
  */
-char* csvr_get_delim();
-int csvr_get_allowstdchange();
+char* csvr_get_delim(struct csv_record*);
+int csvr_get_allowstdchange(struct csv_record*);
 
 /**
  * Mutators
  */
-void csvr_set_delim(const char* delim);
-void csvr_set_qualifiers(int qualifiers);
-void csvr_set_normal(int normal);
-void csvr_set_internalbreak(const char* internalBreak);
-void csvw_set_delim(const char* delim);
-void csvw_set_inplaceedit(int i);
-void csvw_set_qualifiers(int i);
-void csvw_set_lineending(const char* lineEnding);
-void csvw_set_filename(const char* filename);
-
+void csvr_set_delimiter(struct csv_record*, const char* delim);
+void csvr_set_qualifiers(struct csv_record*, int qualifiers);
+void csvr_set_normal(struct csv_record*, int normal);
+void csvr_set_internalbreak(struct csv_record*, const char* internalBreak);
+void csvw_set_inplaceedit(struct csv_record*, int i);
+void csvw_set_qualifiers(struct csv_record*, int i);
+void csvw_set_lineending(struct csv_record*, const char* lineEnding);
+void csvw_set_filename(struct csv_record*, const char* filename);
 
 /**
  * Methods
  */
-
-/**
- *
- */
-void csvw_open();
 
 /**
  * csvr_nextfield takes a pointer to the beginning of a field.
@@ -139,24 +139,36 @@ int csvr_get_record(struct csv_record *rec);
 /**
  *
  */
-//int csvr_open(const char* fileName);
+int csvr_open(struct csv_record*, const char* fileName);
 
 /**
  * Buffers for reading and appending are allocated here.
  */
-void csvr_init(const char* fileName);
+void csvr_init(struct csv_record*, const char* fileName);
 
 /**
  * Free all heap memory.
  */
-void csvr_destroy();
+void csvr_destroy(struct csv_record* record);
 
 /**
  * csvr_growrecord allocates the initial memory for a
  * struct csv_field. It also reallocs an additional fields
  * if fields is already allocated a pointer.
  */
-void csvr_growrecord(struct csv_record *record);
+void csvr_growrecord(struct csv_record* record);
+
+
+
+
+
+
+/** csv_writer **/
+
+/**
+ *
+ */
+void csvw_open();
 
 
 /**
