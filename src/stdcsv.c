@@ -6,7 +6,8 @@
 
 static const char* helpString =
 "\nUsage: stdcsv [vhniqQxXS] [-N field_count] [-dD delimiter]"
-"\n       [-r new_line_replacement] [-o outputfile] input_file\n"
+"\n       [-r new_line_replacement] [-o outputfile] input_file"
+"\n"
 "\n-c|--concatenate       Concatenate all input files together. Assuming a"
 "\n                       header, the first row only prints for first file."
 "\n-C|--concatenate-all   Same as -c except we assume there is no header."
@@ -30,7 +31,8 @@ static const char* helpString =
 "\n-W|--crlf              Output will have Windows line endings."
 "\n-X|--no-rfc4180-out    Embedded quotes won't be duplicated in the output."
 "\n-x|--no-rfc4180-in     Embedded quotes won't be duplicated in the input."
-"\n                       More info: https://www.ietf.org/rfc/rfc4180.txt\n"
+"\n                       More info: https://www.ietf.org/rfc/rfc4180.txt"
+"\n"
 "\nRFC4180 is not an industry standard, so many csv files will not follow"
 "\nthe rules proposed by it. If no input quote options are specified, stdcsv"
 "\nattempt to parse the input following the RFC4180 rules. If a violation is"

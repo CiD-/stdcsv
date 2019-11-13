@@ -8,13 +8,13 @@
 #define STRING_VALUE(arg) #arg
 #define TMPDIR_STR STRING_VALUE(TMPDIR)
 
-#define MIN_SPACE_AVAILABLE     10000000000
+#define MIN_SPACE_AVAILABLE     5000000000
 
 #define CSV_DONE                -4
 #define CSV_DUMP                -3
 #define CSV_SKIP_LINE           -2
 #define CSV_RESET               -1
-#define CSV_BUFFER_FACTOR       100
+#define CSV_BUFFER_FACTOR       128
 #define CSV_MAX_FIELD_SIZE      10000
 #define CSV_MAX_RECORD_SIZE     50000
 
@@ -22,6 +22,11 @@
 #define CSVR_NORMAL_OPEN        -2
 
 #define CSVW_STD_QUALIFIERS     csvw_qualifiers == 2
+
+#define STD_ALL         3
+#define STD_RFC4180     2
+#define STD_WEAK        1
+#define STD_NONE        0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -89,11 +94,11 @@ int csvr_get_allowstdchange(struct csv_record*);
  * Mutators
  */
 void csvr_set_delimiter(struct csv_record*, const char* delim);
-void csvr_set_qualifiers(struct csv_record*, int qualifiers);
+void csvr_set_standard(struct csv_record*, int standard);
 void csvr_set_normal(struct csv_record*, int normal);
 void csvr_set_internalbreak(struct csv_record*, const char* internalBreak);
 void csvw_set_inplaceedit(struct csv_record*, int i);
-void csvw_set_qualifiers(struct csv_record*, int i);
+void csvw_set_standard(struct csv_record*, int i);
 void csvw_set_lineending(struct csv_record*, const char* lineEnding);
 void csvw_set_filename(struct csv_record*, const char* filename);
 
@@ -144,7 +149,7 @@ int csvr_open(struct csv_record*, const char* fileName);
 /**
  * Buffers for reading and appending are allocated here.
  */
-void csvr_init(struct csv_record*, const char* fileName);
+void csvr_init(struct csv_record*);
 
 /**
  * Free all heap memory.

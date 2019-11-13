@@ -5,6 +5,8 @@ static struct sigaction act;
 /* sigset_t and sa_flags only set to shut up valgrind */
 static sigset_t vg_shutup = { {0} };
 
+static int _signalsReady = FALSE;
+
 
 /**
  * Internal Structure
@@ -15,7 +17,7 @@ struct csv_internal {
         char appendBuffer[CSV_BUFFER_FACTOR];
         char delimiter[32];
         char inlineBreak[32];
-        uint allocatedSize;
+        uint fieldsAllocated;
         int recordLen;
         int bufferSize;
         uint delimLen;
@@ -25,7 +27,7 @@ struct csv_internal {
         uint inlineBreaks;
 
         /* Flags */
-        int qualifiers;
+        int standard;
         int allowStdChange;
         int normal;
         int normalOrg;
@@ -54,9 +56,9 @@ void csvr_set_delimiter(struct csv_record* rec, const char* delim)
         STRNCPY(rec->_internal->delimiter, delim, 32);
 }
 
-void csvr_set_qualifiers(struct csv_record* rec, int i)
+void csvr_set_standard(struct csv_record* rec, int i)
 {
-        rec->_internal->qualifiers = (rec->_internal->qualifiers) ? i : 0;
+        rec->_internal->standard = (rec->_internal->standard) ? i : 0;
         rec->_internal->allowStdChange = 0;
 }
 
@@ -73,7 +75,7 @@ void csvr_set_internalbreak(struct csv_record* rec, const char* internalBreak)
 void csvr_lowerstandard(struct csv_record* rec)
 {
         if (!rec->_internal->allowStdChange) {
-                switch(rec->_internal->qualifiers) {
+                switch(rec->_internal->standard) {
                 case 1:
                         fprintf(stderr,
                                 "Line %d: Qualifier issue.\n",
@@ -91,7 +93,7 @@ void csvr_lowerstandard(struct csv_record* rec)
                 exit(EXIT_FAILURE);
         }
 
-        switch(rec->_internal->qualifiers) {
+        switch(rec->_internal->standard) {
         case 1:
                 fprintf(stderr,
                         "Line %d: Qualifier issue. Quotes disabled.\n",
@@ -107,7 +109,7 @@ void csvr_lowerstandard(struct csv_record* rec)
                 exit(EXIT_FAILURE);
         }
 
-        --rec->_internal->qualifiers;
+        --rec->_internal->standard;
         rec->_internal->rows = 0;
         rec->_internal->inlineBreaks = 0;
         fseek(rec->_internal->file, 0, SEEK_SET);
@@ -267,7 +269,7 @@ int csvr_get_record(struct csv_record* rec)
         }
 
         if (rec->_internal->recordLen == EOF) {
-                rec->_internal->allocatedSize = 0;
+                rec->_internal->fieldsAllocated = 0;
                 rec->_internal->normal = rec->_internal->normalOrg;
                 csvr_destroy(rec);
                 return FALSE;
@@ -275,13 +277,13 @@ int csvr_get_record(struct csv_record* rec)
 
         char* pBuffer = rec->_internal->buffer;
 
-        if (!*rec->_internal->delimiter && !rec->_internal->allocatedSize)
+        if (!*rec->_internal->delimiter && !rec->_internal->fieldsAllocated)
                 csvr_determine_delimiter(rec, pBuffer);
 
         while(pBuffer[0] != '\0') {
-                if (++(fieldIndex) > rec->_internal->allocatedSize)
+                if (++(fieldIndex) > rec->_internal->fieldsAllocated)
                         csvr_growrecord(rec);
-                if (rec->_internal->qualifiers && pBuffer[0] == '"')
+                if (rec->_internal->standard && pBuffer[0] == '"')
                         rec->fields[fieldIndex-1] = csvr_nextquoted(&pBuffer);
                 else
                         rec->fields[fieldIndex-1] = csvr_nextfield(&pBuffer);
@@ -296,7 +298,7 @@ int csvr_get_record(struct csv_record* rec)
         if (rec->_internal->normal > 0) {
                 /* Append fields if we are short */
                 while (rec->_internal->normal > fieldIndex) {
-                        if (++(fieldIndex) > rec->_internal->allocatedSize)
+                        if (++(fieldIndex) > rec->_internal->fieldsAllocated)
                                 csvr_growrecord(rec);
                         rec->fields[fieldIndex-1].length = 0;
                 }
@@ -304,7 +306,7 @@ int csvr_get_record(struct csv_record* rec)
         }
 
         if (rec->_internal->normal == CSVR_NORMAL_OPEN)
-                rec->_internal->normal = rec->_internal->allocatedSize;
+                rec->_internal->normal = rec->_internal->fieldsAllocated;
 
         ++rec->_internal->rows;
 
@@ -313,10 +315,9 @@ int csvr_get_record(struct csv_record* rec)
         return TRUE;
 }
 
-/* TODO - should return FILE* and not be passed a record struct */
 int csvr_open(struct csv_record* rec, const char* fileName)
 {
-        //EXIT_IF(fclose(rec->_internal->file) == EOF, NULL);
+        csvr_init(rec);
         rec->_internal->rows = 0;
         if (fileName) {
                 rec->_internal->file = fopen(fileName, "r");
@@ -331,35 +332,63 @@ int csvr_open(struct csv_record* rec, const char* fileName)
         return 1;
 }
 
-void csvr_init(struct csv_record* rec, const char* fileName)
+void csvr_init(struct csv_record* rec)
 {
-        if (fileName)
-                csvr_open(rec, fileName);
+        MALLOC(rec, sizeof(*rec));
+        *rec = (struct csv_record) {
+                NULL    /* fields */
+                ,0      /* size */
+                ,NULL   /* _internal */
+        };
+
+        MALLOC(rec->_internal, sizeof(*rec->_internal));
+        *rec->_internal = (struct csv_internal) {
+                NULL         /* file */
+                ,NULL        /* buffer */
+                ,""          /* appendBuffer */
+                ,"\0"        /* delimiter */
+                ,"\n"        /* inlineBreak */
+                ,0           /* fieldsAllocated; */
+                ,0           /* recordLen; */
+                ,0           /* bufferSize; */
+                ,1           /* delimLen; */
+                ,0           /* rows; */
+                ,0           /* inlineBreaks; */
+                ,STD_RFC4180 /* standard; */
+                ,FALSE       /* allowStdChange; */
+                ,0           /* normal; */
+                ,0           /* normalOrg; */
+                ,0           /* extraField; */
+        };
 
         MALLOC(rec->_internal->buffer, CSV_BUFFER_FACTOR);
 
-        /** Attach signal handlers **/
-        act.sa_mask = vg_shutup;
-        act.sa_flags = 0;
-        act.sa_handler = cleanexit;
-        sigaction(SIGINT, &act, NULL);
-        sigaction(SIGQUIT, &act, NULL);
-        sigaction(SIGTERM, &act, NULL);
-        sigaction(SIGHUP, &act, NULL);
-        //sigaction(SIGKILL, &act, NULL);
+        if (!_signalsReady) {
+                /** Attach signal handlers **/
+                act.sa_mask = vg_shutup;
+                act.sa_flags = 0;
+                act.sa_handler = cleanexit;
+                sigaction(SIGINT, &act, NULL);
+                sigaction(SIGQUIT, &act, NULL);
+                sigaction(SIGTERM, &act, NULL);
+                sigaction(SIGHUP, &act, NULL);
+
+                _signalsReady = TRUE;
+        }
 }
 
 void csvr_destroy(struct csv_record* rec)
 {
         FREE(rec->_internal->buffer);
+        FREE(rec->_internal);
         FREE(rec);
 }
 
 void csvr_growrecord(struct csv_record* rec)
 {
-        ++rec->_internal->allocatedSize;
-        uint arraySize = rec->_internal->allocatedSize * sizeof(struct csv_field);
-        if (rec->_internal->allocatedSize > 1) {
+        ++rec->_internal->fieldsAllocated;
+        uint arraySize = rec->_internal->fieldsAllocated * sizeof(struct csv_field);
+        if (rec->_internal->fieldsAllocated > 1) {
                 REALLOC(rec->fields, arraySize);
         } else {
                 MALLOC(rec->fields, arraySize);
