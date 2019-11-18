@@ -18,10 +18,7 @@
 #define CSV_MAX_FIELD_SIZE      10000
 #define CSV_MAX_RECORD_SIZE     50000
 
-#define CSVR_STD_QUALIFIERS     csvr_qualifiers == 2
 #define CSVR_NORMAL_OPEN        -2
-
-#define CSVW_STD_QUALIFIERS     csvw_qualifiers == 2
 
 #define STD_ALL         3
 #define STD_RFC4180     2
@@ -107,17 +104,17 @@ void csvw_set_filename(struct csv_record*, const char* filename);
  */
 
 /**
- * csvr_nextfield takes a pointer to the beginning of a field.
- * *begin is searched for the next delimiter.
+ * csvr_parse_none takes a pointer to the beginning of
+ * a field. *begin is searched for the next delimiter.
  *
  * Returns:
  *      - struct csv_field representing parsed field
  *      - NULL on failure
  */
-struct csv_field csvr_nextfield(char** begin);
+struct csv_field csvr_parse_none(struct csv_record*, char** begin);
 
 /**
- * csvr_nextquoted behaves the same as csvr_nextfield
+ * csvr_parse_weak behaves the same as csvr_parse_none
  * except that it expects the next field to be quoted.
  * *begin is searched for a terminating quote and
  * a delimiter.
@@ -126,7 +123,19 @@ struct csv_field csvr_nextfield(char** begin);
  *      - struct csv_field representing parsed field
  *      - NULL on failure
  */
-struct csv_field csvr_nextquoted(char** begin);
+struct csv_field csvr_parse_weak(struct csv_record*, char** begin);
+
+/**
+ * csvr_parse_rfc4180 takes a pointer to the beginning of
+ * a field. *begin is searched for the next delimiter
+ * while we are not within text qualification. This is the
+ * default standard and most flexible/ideal.
+ *
+ * Returns:
+ *      - struct csv_field representing parsed field
+ *      - NULL on failure
+ */
+struct csv_field csvr_parse_rfc4180(struct csv_record*, char** begin);
 
 /**
  * csv_getfields takes an array of pointers to csv_field's.
@@ -144,12 +153,12 @@ int csvr_get_record(struct csv_record *rec);
 /**
  *
  */
-int csvr_open(struct csv_record*, const char* fileName);
+void csvr_open(struct csv_record*, const char* fileName);
 
 /**
  * Buffers for reading and appending are allocated here.
  */
-void csvr_init(struct csv_record*);
+void csv_init(struct csv_record*);
 
 /**
  * Free all heap memory.
@@ -163,9 +172,10 @@ void csvr_destroy(struct csv_record* record);
  */
 void csvr_growrecord(struct csv_record* record);
 
-
-
-
+/**
+ *
+ */
+void csvr_parse(struct csv_record* rec, char* line);
 
 
 /** csv_writer **/
