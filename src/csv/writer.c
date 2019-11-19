@@ -5,7 +5,6 @@ static char csvw_fileName_org[PATH_MAX] = "";
 static char csvw_tempname[PATH_MAX] = "";
 static char csvw_tempdir[PATH_MAX-10] = "";
 static FILE* csvw_file = NULL;
-static int csvw_fileIndex = 1;
 static char csvw_buffer[CSV_MAX_FIELD_SIZE];
 static char csvw_delim[32] = "";
 static int csvw_delimlen = 0;
@@ -31,28 +30,22 @@ void csvw_set_qualifiers(int i)
         csvw_qualifiers = (csvw_qualifiers) ? i : 0;
 }
 
-void csvw_set_lineending(const char* lineEnding)
+void csvw_set_lineending(struct csv_record* rec, const char* lineEnding)
 {
         csvw_lineEnding[0] = lineEnding[0];
         csvw_lineEnding[1] = lineEnding[1];
         csvw_lineEnding[2] = lineEnding[2];
 }
 
-void csvw_set_filename(const char* filename)
+void csvw_set_filename(struct csv_record* rec, const char* filename)
 {
         STRNCPY(csvw_fileName_org, filename, PATH_MAX);
         STRNCPY(csvw_fileName, filename, PATH_MAX);
 }
 
-void csvw_set_inplaceedit(int ipe)
-{
-        csvw_inPlaceEdit = ipe;
-}
-
 void csvw_reset()
 {
         if (csvw_fileName[0]) {
-                csvw_fileIndex = 1;
                 STRNCPY(csvw_fileName, csvw_fileName_org, PATH_MAX);
         }
 

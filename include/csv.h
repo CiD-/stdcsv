@@ -45,9 +45,9 @@ struct csv_internal;
 
 /* Structure containing dynamic array of fields */
 struct csv_record {
+        struct csv_internal* _internal;
         struct csv_field* fields;
         int size;
-        struct csv_internal* _internal;
 };
 
 extern const struct csv_record blank_record;

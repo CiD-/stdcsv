@@ -74,12 +74,12 @@ void csvr_lowerstandard(struct csv_record* rec)
 {
         if (!rec->_internal->allowStdChange) {
                 switch(rec->_internal->standard) {
-                case 1:
+                case STD_WEAK:
                         fprintf(stderr,
                                 "Line %d: Qualifier issue.\n",
                                 1 + rec->_internal->rows + rec->_internal->inlineBreaks);
                         break;
-                case 2:
+                case STD_RFC4180:
                         fprintf(stderr,
                                 "Line %d: RFC4180 Qualifier issue.\n",
                                 1 + rec->_internal->rows + rec->_internal->inlineBreaks);
@@ -92,12 +92,12 @@ void csvr_lowerstandard(struct csv_record* rec)
         }
 
         switch(rec->_internal->standard) {
-        case 1:
+        case STD_WEAK:
                 fprintf(stderr,
                         "Line %d: Qualifier issue. Quotes disabled.\n",
                         1 + rec->_internal->rows + rec->_internal->inlineBreaks);
                 break;
-        case 2:
+        case STD_RFC4180:
                 fprintf(stderr,
                         "Line %d: Qualifier issue. RFC4180 quotes disabled.\n",
                         1 + rec->_internal->rows + rec->_internal->inlineBreaks);
@@ -137,39 +137,29 @@ void csvr_appendlines(struct csv_record* rec)
                 rec->_internal->recordLen += offset;
 }
 
-struct csv_field csvr_parse_weak(struct csv_record* rec, char** begin)
+struct csv_field csvr_parse_rfc4180(struct csv_record* rec, char** begin)
 {
-        unsigned int delimI = 0;
-        unsigned int onQualifier = 0;
-        unsigned int i = 1;
+        uint delimI = 0;
+        uint onQuote = FALSE;
+        uint qualified = FALSE;
+        uint i = 1;
 
         struct csv_field field = {NULL, 0};
 
         while (1) {
                 for (; (*begin)[i] != '\0' && delimI != rec->_internal->delimLen; ++i) {
-                        if (onQualifier) {
-                                if ((*begin)[i] == rec->_internal->delimiter[delimI]) {
-                                        ++delimI;
-                                } else {
-                                        delimI = 0;
-                                        onQualifier = FALSE;
-                                }
-                                //else if ((*begin)[i] == '"') {
-                                //        if(CSVR_STD_QUALIFIERS) {
-                                //                if (delimI)
-                                //                        return field;
-                                //                onQualifier = FALSE;
-                                //                removecharat(*begin, i);
-                                //        }
-                                //}
-                                //else if (CSVR_STD_QUALIFIERS) {
-                                //        return field;
-                                //}
+                        if (qualified) {
+                                if (onQuote && (*begin)[i] == '"')
+                                        removecharat(*begin, i);
+                        } else if ((*begin)[i] == rec->_internal->delimiter[delimI]) {
+                                ++delimI;
                         } else {
-                                onQualifier = ((*begin)[i] == '"');
+                                delimI = ((*begin)[i] == rec->_internal->delimiter[0]) ? 1 : 0;
                         }
+                        if ( (onQuote = ((*begin)[i] == '"') ) )
+                                qualified = !qualified;
                 }
-                if ((*begin)[i] == '\0' && !onQualifier) {
+                if ((*begin)[i] == '\0' && !onQuote) {
                         int newLineLen = strlen(rec->_internal->inlineBreak);
                         if (newLineLen + rec->_internal->recordLen >= rec->_internal->bufferSize)
                                 csvr_increasebuffer(rec);
@@ -192,7 +182,58 @@ struct csv_field csvr_parse_weak(struct csv_record* rec, char** begin)
 
         /* Hack for case when last character is delimiter. */
         if ((*begin)[i] == '\0' && delimI == rec->_internal->delimLen) {
-                int extraField = (extraField) ? 0 : 1;
+                int extraField = 0;
+                extraField = (extraField) ? 0 : 1;
+                *begin -= extraField;
+        }
+
+        *begin += i;
+
+        return field;
+}
+
+struct csv_field csvr_parse_weak(struct csv_record* rec, char** begin)
+{
+        unsigned int delimI = 0;
+        unsigned int onQuote = 0;
+        unsigned int i = 1;
+
+        struct csv_field field = {NULL, 0};
+
+        while (1) {
+                for (; (*begin)[i] != '\0' && delimI != rec->_internal->delimLen; ++i) {
+                        if (onQuote && (*begin)[i] == rec->_internal->delimiter[delimI]) {
+                                ++delimI;
+                        } else {
+                                delimI = 0;
+                                onQuote = ((*begin)[i] == '"');
+                        }
+                }
+                if ((*begin)[i] == '\0' && !onQuote) {
+                        int newLineLen = strlen(rec->_internal->inlineBreak);
+                        if (newLineLen + rec->_internal->recordLen >= rec->_internal->bufferSize)
+                                csvr_increasebuffer(rec);
+
+                        strcat(rec->_internal->buffer, rec->_internal->inlineBreak);
+                        //int n = rec->_internal->bufferSize - rec->_internal->recordLen - newLineLen;
+                        //rec->_internal->recordLen = safegetline(rec->_internal->file, rec->_internal->appendBuffer, n);
+                        csvr_appendlines(rec);
+                        if (rec->_internal->recordLen == EOF) /** TODO **/
+                                return field;
+                        strcat(rec->_internal->buffer, rec->_internal->appendBuffer);
+                        ++rec->_internal->inlineBreaks;
+                        continue;
+                }
+                break;
+        }
+
+        field.begin = *begin + 1;
+        field.length = (delimI == rec->_internal->delimLen) ? i - 2 - rec->_internal->delimLen : i - 2;
+
+        /* Hack for case when last character is delimiter. */
+        if ((*begin)[i] == '\0' && delimI == rec->_internal->delimLen) {
+                int extraField = 0;
+                extraField = (extraField) ? 0 : 1;
                 *begin -= extraField;
         }
 
@@ -219,7 +260,8 @@ struct csv_field csvr_parse_none(struct csv_record* rec, char** begin)
 
         /* Hack for case when last character is delimiter. */
         if ((*begin)[i] == '\0' && delimI == rec->_internal->delimLen) {
-                int extraField = (extraField) ? 0 : 1;
+                int extraField = 0;
+                extraField = (extraField) ? 0 : 1;
                 *begin -= extraField;
         }
 
