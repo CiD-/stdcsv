@@ -11,25 +11,18 @@ static int _signalsReady = FALSE;
 /**
  * Internal Structure
  */
-struct csv_internal {
+struct csvr_internal {
         FILE* file;
         char* buffer;
         char appendBuffer[CSV_BUFFER_FACTOR];
-        char delimiter[32];
-        char inlineBreak[32];
         uint fieldsAllocated;
-        int recordLen;
         int bufferSize;
-        uint delimLen;
 
         /* Statistics */
         uint rows;
         uint inlineBreaks;
 
-        /* Flags */
-        int standard;
-        int allowStdChange;
-        int normal;
+        /* Properties */
         int normalOrg;
 };
 
@@ -39,47 +32,16 @@ struct csv_internal {
  */
 //void csvr_determine_delimiter(const char* header);
 
-char* csvr_get_delim(struct csv_record* rec)
-{
-        return rec->_internal->delimiter;
-}
-
-int csvr_get_allowstdchange(struct csv_record* rec)
-{
-        return rec->_internal->allowStdChange;
-}
-
-void csvr_set_delimiter(struct csv_record* rec, const char* delim)
-{
-        STRNCPY(rec->_internal->delimiter, delim, 32);
-}
-
-void csvr_set_standard(struct csv_record* rec, int i)
-{
-        rec->_internal->standard = (rec->_internal->standard) ? i : 0;
-        rec->_internal->allowStdChange = FALSE;
-}
-
-void csvr_set_normal(struct csv_record* rec, int i)
-{
-        rec->_internal->normal = i;
-}
-
-void csvr_set_internalbreak(struct csv_record* rec, const char* internalBreak)
-{
-        STRNCPY(rec->_internal->inlineBreak, internalBreak, 32);
-}
-
 void csvr_lowerstandard(struct csv_record* rec)
 {
         if (!rec->_internal->allowStdChange) {
-                switch(rec->_internal->standard) {
-                case STD_WEAK:
+                switch(rec->_internal->quotes) {
+                case QUOTE_WEAK:
                         fprintf(stderr,
                                 "Line %d: Qualifier issue.\n",
                                 1 + rec->_internal->rows + rec->_internal->inlineBreaks);
                         break;
-                case STD_RFC4180:
+                case QUOTE_RFC4180:
                         fprintf(stderr,
                                 "Line %d: RFC4180 Qualifier issue.\n",
                                 1 + rec->_internal->rows + rec->_internal->inlineBreaks);
@@ -91,13 +53,13 @@ void csvr_lowerstandard(struct csv_record* rec)
                 exit(EXIT_FAILURE);
         }
 
-        switch(rec->_internal->standard) {
-        case STD_WEAK:
+        switch(rec->_internal->quotes) {
+        case QUOTE_WEAK:
                 fprintf(stderr,
                         "Line %d: Qualifier issue. Quotes disabled.\n",
                         1 + rec->_internal->rows + rec->_internal->inlineBreaks);
                 break;
-        case STD_RFC4180:
+        case QUOTE_RFC4180:
                 fprintf(stderr,
                         "Line %d: Qualifier issue. RFC4180 quotes disabled.\n",
                         1 + rec->_internal->rows + rec->_internal->inlineBreaks);
@@ -107,7 +69,7 @@ void csvr_lowerstandard(struct csv_record* rec)
                 exit(EXIT_FAILURE);
         }
 
-        --rec->_internal->standard;
+        --rec->_internal->quotes;
         rec->_internal->rows = 0;
         rec->_internal->inlineBreaks = 0;
         fseek(rec->_internal->file, 0, SEEK_SET);
@@ -333,25 +295,25 @@ void csvr_parse(struct csv_record* rec, char* line)
                 if (++(fieldIndex) > rec->_internal->fieldsAllocated)
                         csvr_growrecord(rec);
 
-                switch(rec->_internal->standard) {
-                case STD_ALL:
+                switch(rec->_internal->quotes) {
+                case QUOTE_ALL:
                         /* Not seeing a point to implementing this. */
-                case STD_RFC4180:
+                case QUOTE_RFC4180:
                         rec->fields[fieldIndex-1] = csvr_parse_rfc4180(rec, &line);
                         break;
-                case STD_WEAK:
+                case QUOTE_WEAK:
                         /* Implicit fallthrough if next field is not quoted */
-                        if (rec->_internal->standard && line[0] == '"') {
+                        if (rec->_internal->quotes && line[0] == '"') {
                                 rec->fields[fieldIndex-1] = csvr_parse_weak(rec, &line);
                                 break;
                         }
-                case STD_NONE:
+                case QUOTE_NONE:
                         rec->fields[fieldIndex-1] = csvr_parse_none(rec, &line);
                         break;
                 }
 
                 if (!rec->fields[fieldIndex-1].begin) {
-                        csvr_lowerstandard(rec);
+                        csvr_lowerquotes(rec);
                         rec->size = CSV_RESET;
                         //return TRUE;
                 }
@@ -396,27 +358,26 @@ void csv_init(struct csv_record* rec)
         *rec = (struct csv_record) {
                 NULL    /* fields */
                 ,0      /* size */
-                ,NULL   /* _internal */
         };
 
         MALLOC(rec->_internal, sizeof(*rec->_internal));
         *rec->_internal = (struct csv_internal) {
-                NULL         /* file */
-                ,NULL        /* buffer */
-                ,""          /* appendBuffer */
-                ,"\0"        /* delimiter */
-                ,"\n"        /* inlineBreak */
-                ,0           /* fieldsAllocated; */
-                ,0           /* recordLen; */
-                ,0           /* bufferSize; */
-                ,1           /* delimLen; */
-                ,0           /* rows; */
-                ,0           /* inlineBreaks; */
-                ,STD_RFC4180 /* standard; */
-                ,FALSE       /* allowStdChange; */
-                ,0           /* normal; */
-                ,0           /* normalOrg; */
-                ,0           /* extraField; */
+                NULL           /* file */
+                ,NULL          /* buffer */
+                ,""            /* appendBuffer */
+                ,"\0"          /* delimiter */
+                ,"\n"          /* inlineBreak */
+                ,0             /* fieldsAllocated; */
+                ,0             /* recordLen */
+                ,0             /* bufferSize */
+                ,1             /* delimLen */
+                ,0             /* rows */
+                ,0             /* inlineBreaks */
+                ,QUOTE_RFC4180 /* quotes */
+                ,FALSE         /* allowStdChange */
+                ,0             /* normal */
+                ,0             /* normalOrg */
+                ,0             /* extraField */
         };
 
         MALLOC(rec->_internal->buffer, CSV_BUFFER_FACTOR);

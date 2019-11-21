@@ -33,7 +33,7 @@ static const char* helpString =
 "\n-x|--no-rfc4180-in     Embedded quotes won't be duplicated in the input."
 "\n                       More info: https://www.ietf.org/rfc/rfc4180.txt"
 "\n"
-"\nRFC4180 is not an industry standard, so many csv files will not follow"
+"\nRFC4180 is not technically a standard, so many csv files will not follow"
 "\nthe rules proposed by it. If no input quote options are specified, stdcsv"
 "\nattempt to parse the input following the RFC4180 rules. If a violation is"
 "\nfound, parsing will restart from the beginning of the file (not stdin) with"
@@ -43,7 +43,7 @@ static const char* helpString =
 "\nspecified in the options. Invalid input from stdin cannot be retrieved.\n";
 
 
-void parseargs(char c)
+void parseargs(char c, struct csv_reader* reader, struct csv_writer* writer)
 {
         switch (c) {
         case 'c':
@@ -53,58 +53,74 @@ void parseargs(char c)
                 //csvr_set_cat(CSVR_CAT_ALL);
                 break;
         //case 'v': /* verbose */
-        //        verbose = 1;
+        //        verbose = TRUE;
         //        break;
         case 'h': /* help */
                 puts(helpString);
                 exit(EXIT_SUCCESS);
         case 'n': /* normalize */
-                csvr_set_normal(CSVR_NORMAL_OPEN);
+                reader->normal = CSV_NORMAL_OPEN;
                 break;
         case 'N': { /* number-of-fields */
                 long val = stringtolong10(optarg);
                 if (val < 1) {
-                        fputs("Invalid number of columns", stderr);
+                        fputs("Invalid number of columns.\n", stderr);
                         exit(EXIT_FAILURE);
                 }
-                csvr_set_normal(val);
+                reader->normal = val;
         }
                 break;
         case 'i': /* in-place-edit */
                 //csvw_set_inplaceedit(1);
                 break;
-        case 'q': /* suppress-qualifiers */
-                csvw_set_qualifiers(0);
+        case 'q': /* out-quotes */
+                if(strcasecmp(optarg, "ALL"))
+                        writer->quotes = QUOTE_ALL;
+                else if (!strcasecmp(optarg, "WEAK"))
+                        writer->quotes = QUOTE_WEAK;
+                else if (!strcasecmp(optarg, "NONE"))
+                        writer->quotes = QUOTE_NONE;
+                else if (!strcasecmp(optarg, "RFC4180"))
+                        writer->quotes = QUOTE_RFC4180;
+                else {
+                        fprintf(stderr, "Invalid quote option: %s", optarg);
+                        exit(EXIT_FAILURE);
+                }
                 break;
-        case 'Q': /* ignore-qualifiers */
-                csvr_set_qualifiers(0);
-                break;
-        case 'X': /* disable-std-quotes */
-                csvr_set_qualifiers(1);
-                break;
-        case 'x': /* disable-std-quotes */
-                csvw_set_qualifiers(1);
+        case 'Q': /* in-quotes */
+                if(strcasecmp(optarg, "ALL"))
+                        writer->quotes = QUOTE_ALL;
+                else if (!strcasecmp(optarg, "WEAK"))
+                        writer->quotes = QUOTE_WEAK;
+                else if (!strcasecmp(optarg, "NONE"))
+                        writer->quotes = QUOTE_NONE;
+                else if (!strcasecmp(optarg, "RFC4180"))
+                        writer->quotes = QUOTE_RFC4180;
+                else {
+                        fprintf(stderr, "Invalid quote option: %s", optarg);
+                        exit(EXIT_FAILURE);
+                }
                 break;
         case 'D': /* output-delimiter */
-                csvw_set_delim(optarg);
+                STRNCPY(writer->delimiter, optarg, 32);
                 break;
         case 'd': /* input-delimiter */
-                csvr_set_delim(optarg);
+                STRNCPY(reader->delimiter, optarg, 32);
                 break;
         case 'r': /* no-embedded-nl */
-                csvr_set_internalbreak("");
+                STRNCPY(reader->inlineBreak, "", 32);
                 break;
         case 'R': /* replace-newlines */
-                csvr_set_internalbreak(optarg);
+                STRNCPY(reader->inlineBreak, optarg, 32);
                 break;
         case 'o': /* output-file */
-                csvw_set_filename(optarg);
+                STRNCPY(writer->fileName, optarg, PATH_MAX);
                 break;
         case 'W': /* windows-line-ending */
-                csvw_set_lineending("\r\n");
+                STRNCPY(writer->lineEnding, "\r\n", 3);
                 break;
         case 'M': /* mac-line-ending */
-                csvw_set_lineending("\r");
+                STRNCPY(writer->lineEnding, "\r", 3);
                 break;
         case '?': /* Should never get here... */
                 break;
@@ -126,12 +142,10 @@ int main (int argc, char **argv)
                 {"normalize", no_argument, 0, 'n'},
                 {"num-fields", required_argument, 0, 'N'},
                 {"in-place-edit", no_argument, 0, 'i'},
-                {"suppress-quotes", no_argument, 0, 'q'},
-                {"ignore-quotes", no_argument, 0, 'Q'},
-                {"no-rfc4180-out", no_argument, 0, 'x'},
-                {"no-rfc4180-in", no_argument, 0, 'X'},
-                {"out-delimiter", required_argument, 0, 'D'},
-                {"in-delimiter", required_argument, 0, 'd'},
+                {"out-quotes", required_argument, 0, 'q'},
+                {"in-quotes", required_argument, 0, 'Q'},
+                {"out-delimiter", required_argument, 0, 'd'},
+                {"in-delimiter", required_argument, 0, 'D'},
                 {"no-embedded-nl", no_argument, 0, 'r'},
                 {"embedded-nl-sub", required_argument, 0, 'R'},
                 {"output-file", required_argument, 0, 'o'},
@@ -144,23 +158,27 @@ int main (int argc, char **argv)
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        while ( (c = getopt_long (argc, argv, "rhniqQxXcCN:D:d:R:o:W",
+        struct csv_reader* reader = NULL;
+        struct csv_writer* writer = NULL;
+        struct csv_record* record = NULL;
+
+        while ( (c = getopt_long (argc, argv, "rhniqQcCN:D:d:R:o:W",
                                   long_options, &option_index)) != -1)
-                parseargs(c);
+                parseargs(c, reader, writer);
 
-        do {
-                if (optind == argc)
-                        csvr_init(NULL);
-                else
-                        csvr_init(argv[optind++]);
+        //do {
+        //        if (optind == argc)
+        //                csvr_init(NULL);
+        //        else
+        //                csvr_init(argv[optind++]);
 
-                struct csv_record rec = blank_record;
+        //        //struct csv_record rec = blank_record;
 
-                csvw_open();
-                while (csvr_get_record(&rec))
-                        csvw_writeline_d(&rec, csvr_get_delim());
-                csvw_close();
-        } while (optind < argc);
+        //        csvw_open();
+        //        while (csvr_get_record(&rec))
+        //                csvw_writeline_d(&rec, csvr_get_delim());
+        //        csvw_close();
+        //} while (optind < argc);
 
         return 0;
 }

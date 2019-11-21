@@ -18,12 +18,12 @@
 #define CSV_MAX_FIELD_SIZE      10000
 #define CSV_MAX_RECORD_SIZE     50000
 
-#define CSVR_NORMAL_OPEN        -2
+#define CSV_NORMAL_OPEN         -2
 
-#define STD_ALL         3
-#define STD_RFC4180     2
-#define STD_WEAK        1
-#define STD_NONE        0
+#define QUOTE_ALL         3
+#define QUOTE_RFC4180     2
+#define QUOTE_WEAK        1
+#define QUOTE_NONE        0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,14 +40,31 @@ struct csv_field {
         size_t length;
 };
 
-/* Forward declaration of internal structure */
-struct csv_internal;
+/* Forward declaration of internal structures */
+struct csvr_internal;
+struct csvw_internal;
 
 /* Structure containing dynamic array of fields */
 struct csv_record {
-        struct csv_internal* _internal;
         struct csv_field* fields;
         int size;
+};
+
+struct csv_reader {
+        struct csvr_internal* _internal;
+        char delimiter[32];
+        char inlineBreak[32];
+        int quotes;
+        int normal;
+        int allowStdChange;
+};
+
+struct csv_writer {
+        char fileName[PATH_MAX];
+        char delimiter[32];
+        char lineEnding[3];
+        int quotes;
+        struct csv_writer* _internal;
 };
 
 extern const struct csv_record blank_record;
@@ -82,24 +99,6 @@ int csv_get_string(struct csv_field* s, char* buffer);
 /** csv_reader **/
 
 /**
- * Accessors
- */
-char* csvr_get_delim(struct csv_record*);
-int csvr_get_allowstdchange(struct csv_record*);
-
-/**
- * Mutators
- */
-void csvr_set_delimiter(struct csv_record*, const char* delim);
-void csvr_set_standard(struct csv_record*, int standard);
-void csvr_set_normal(struct csv_record*, int normal);
-void csvr_set_internalbreak(struct csv_record*, const char* internalBreak);
-void csvw_set_inplaceedit(struct csv_record*, int i);
-void csvw_set_standard(struct csv_record*, int i);
-void csvw_set_lineending(struct csv_record*, const char* lineEnding);
-void csvw_set_filename(struct csv_record*, const char* filename);
-
-/**
  * Methods
  */
 
@@ -129,7 +128,7 @@ struct csv_field csvr_parse_weak(struct csv_record*, char** begin);
  * csvr_parse_rfc4180 takes a pointer to the beginning of
  * a field. *begin is searched for the next delimiter
  * while we are not within text qualification. This is the
- * default standard and most flexible/ideal.
+ * default quotes and most flexible/ideal.
  *
  * Returns:
  *      - struct csv_field representing parsed field
