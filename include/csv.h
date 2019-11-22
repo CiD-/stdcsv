@@ -13,7 +13,7 @@
 #define CSV_DONE                -4
 #define CSV_DUMP                -3
 #define CSV_SKIP_LINE           -2
-#define CSV_RESET               -1
+#define CSV_ERROR_QUOTES        -1
 #define CSV_BUFFER_FACTOR       128
 #define CSV_MAX_FIELD_SIZE      10000
 #define CSV_MAX_RECORD_SIZE     50000
@@ -34,6 +34,13 @@
 #include <signal.h>
 #include "util.h"
 
+#define csv_destroy(csv_struct)                 \
+{                                               \
+        FREE(csv_struct->_internal->buffer);    \
+        FREE(csv_struct->_internal);            \
+        FREE(csv_struct);                       \
+}
+
 /* Structure containing an individual field */
 struct csv_field {
         const char* begin;
@@ -41,7 +48,7 @@ struct csv_field {
 };
 
 /* Forward declaration of internal structures */
-struct csvr_internal;
+struct csv_read_internal;
 struct csvw_internal;
 
 /* Structure containing dynamic array of fields */
@@ -51,20 +58,20 @@ struct csv_record {
 };
 
 struct csv_reader {
-        struct csvr_internal* _internal;
+        struct csv_read_internal* _internal;
         char delimiter[32];
         char inlineBreak[32];
         int quotes;
         int normal;
-        int allowStdChange;
+        int failsafeMode;
 };
 
 struct csv_writer {
+        struct csv_writer* _internal;
         char fileName[PATH_MAX];
         char delimiter[32];
         char lineEnding[3];
         int quotes;
-        struct csv_writer* _internal;
 };
 
 extern const struct csv_record blank_record;
@@ -102,42 +109,9 @@ int csv_get_string(struct csv_field* s, char* buffer);
  * Methods
  */
 
-/**
- * csvr_parse_none takes a pointer to the beginning of
- * a field. *begin is searched for the next delimiter.
- *
- * Returns:
- *      - struct csv_field representing parsed field
- *      - NULL on failure
- */
-struct csv_field csvr_parse_none(struct csv_record*, char** begin);
 
 /**
- * csvr_parse_weak behaves the same as csvr_parse_none
- * except that it expects the next field to be quoted.
- * *begin is searched for a terminating quote and
- * a delimiter.
- *
- * Returns:
- *      - struct csv_field representing parsed field
- *      - NULL on failure
- */
-struct csv_field csvr_parse_weak(struct csv_record*, char** begin);
-
-/**
- * csvr_parse_rfc4180 takes a pointer to the beginning of
- * a field. *begin is searched for the next delimiter
- * while we are not within text qualification. This is the
- * default quotes and most flexible/ideal.
- *
- * Returns:
- *      - struct csv_field representing parsed field
- *      - NULL on failure
- */
-struct csv_field csvr_parse_rfc4180(struct csv_record*, char** begin);
-
-/**
- * csv_getfields takes an array of pointers to csv_field's.
+ * csv_get_record takes an array of pointers to csv_field's.
  * The variable fieldCount is set within this function to the
  * number of fields in the current csv line.  If this function
  * fails, fieldCount will be set to -1.
@@ -147,34 +121,27 @@ struct csv_field csvr_parse_rfc4180(struct csv_record*, char** begin);
  *        represents the parsed fields from the next line.
  *      - NULL if EOF
  */
-int csvr_get_record(struct csv_record *rec);
+struct csv_record* csv_get_record(struct csv_reader*);
 
 /**
  *
  */
-void csvr_open(struct csv_record*, const char* fileName);
+void csv_reader_open(struct csv_reader*, const char* fileName);
 
 /**
  * Buffers for reading and appending are allocated here.
  */
-void csv_init(struct csv_record*);
+struct csv_reader* new_csv_reader();
 
 /**
  * Free all heap memory.
  */
-void csvr_destroy(struct csv_record* record);
-
-/**
- * csvr_growrecord allocates the initial memory for a
- * struct csv_field. It also reallocs an additional fields
- * if fields is already allocated a pointer.
- */
-void csvr_growrecord(struct csv_record* record);
+//void csv_destroy(struct csv_reader*);
 
 /**
  *
  */
-void csvr_parse(struct csv_record* rec, char* line);
+struct csv_record* csv_parse(struct csv_reader*, char* line);
 
 
 /** csv_writer **/
@@ -182,7 +149,7 @@ void csvr_parse(struct csv_record* rec, char* line);
 /**
  *
  */
-void csvw_open();
+void csv_writer_open(struct csv_writer*, const char* fileName);
 
 
 /**
@@ -192,7 +159,7 @@ void csvw_open();
  * MIN_SPACE_AVAILABLE, then we use the TMPDIR (defined during
  * compilation). If TMPDIR is not defined during compilation, use /tmp.
  */
-void csvw_init();
+struct csv_writer* new_csv_writer();
 
 /**
  * Relese allocated heap resources
@@ -202,17 +169,17 @@ void csvw_init();
 /**
  * Dump temp file to destination file/stdout
  */
-void csvw_close();
-
-/**
- * wrapper for csvw_writeline with extra field for delimiter. if csvw_delim
- * is not defined, we set it equal to the provided delim.
- */
-void csvw_writeline_d(struct csv_record* rec, char* delim);
+void csv_writer_close(struct csv_writer*);
 
 /**
  * Loop through array of struct csv_field, and print the line to csvw_file.
  */
-void csvw_writeline(struct csv_record* rec);
+void csv_writeline(struct csv_writer*);
+
+/**
+ *
+ */
+void csv_writer_reset(struct csv_writer*);
+
 
 #endif
