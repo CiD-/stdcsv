@@ -49,7 +49,7 @@ struct csv_field {
 
 /* Forward declaration of internal structures */
 struct csv_read_internal;
-struct csvw_internal;
+struct csv_write_internal;
 
 /* Structure containing dynamic array of fields */
 struct csv_record {
@@ -67,8 +67,8 @@ struct csv_reader {
 };
 
 struct csv_writer {
-        struct csv_writer* _internal;
-        char fileName[PATH_MAX];
+        struct csv_write_internal* _internal;
+        char filename[PATH_MAX];
         char delimiter[32];
         char lineEnding[3];
         int quotes;
@@ -149,7 +149,7 @@ struct csv_record* csv_parse(struct csv_reader*, char* line);
 /**
  *
  */
-void csv_writer_open(struct csv_writer*, const char* fileName);
+void csv_writer_open(struct csv_writer*);
 
 
 /**

@@ -1,23 +1,42 @@
 #include "csv.h"
 
-//static char csvw_fileName[PATH_MAX] = "";
-//static char csvw_fileName_org[PATH_MAX] = "";
-//static char csvw_tempname[PATH_MAX] = "";
-//static char csvw_tempdir[PATH_MAX-10] = "";
-//static FILE* csvw_file = NULL;
-//static char csvw_buffer[CSV_MAX_FIELD_SIZE];
-//static char csvw_delim[32] = "";
-//static int csvw_delimlen = 0;
-//static char csvw_lineEnding[3] = "\n";
-//
-///* Flags */
-//static int csvw_qualifiers = 2;
-//static int csvw_inPlaceEdit = 0;
+static char csv_tempdir[PATH_MAX-10] = "";
 
-void csv_writer_reset()
+/**
+ * Internal Prototypes
+ */
+
+
+
+/**
+ * Internal Structure
+ */
+struct csv_write_internal {
+        struct csv_record* _record;
+        char tempname[PATH_MAX];
+        char filename_org[PATH_MAX];
+        FILE* file;
+        char* buffer;
+
+        char appendBuffer[CSV_BUFFER_FACTOR];
+        uint fieldsAllocated;
+        uint delimLen;
+        int bufferSize;
+        int recordLen;
+
+        /* Statistics */
+        uint rows;
+        uint inlineBreaks;
+
+        /* Properties */
+        int normalOrg;
+};
+
+
+void csv_writer_reset(struct csv_writer *writer)
 {
-        if (writer->_internal->fileName[0]) {
-                STRNCPY(writer->_internal->fileName, writer->_internal->fileName_org, PATH_MAX);
+        if (writer->filename[0]) {
+                STRNCPY(writer->filename, writer->_internal->filename_org, PATH_MAX);
         }
 
         EXIT_IF(fclose(writer->_internal->file) == EOF, writer->_internal->tempname);
@@ -32,61 +51,64 @@ void csvw_writeline(struct csv_writer* writer)
         int i = 0;
         unsigned int j = 0;
         int writeIndex = 0;
-        int quotes = 0;
-        int delimI = 0;
+        int quoteCurrentField = 0;
+        uint delimI = 0;
         char c = 0;
-        for (i = 0; i < writer->size; ++i) {
-                quotes = 0;
+
+        struct csv_record* rec = writer->_internal->_record;
+
+        for (i = 0; i < rec->size; ++i) {
+                quoteCurrentField = 0;
                 writeIndex = 0;
                 /* TODO - up front size check. */
-                for (j = 0; j < writer->fields[i].length; ++j) {
-                        c = writer->fields[i].begin[j];
+                for (j = 0; j < rec->fields[i].length; ++j) {
+                        c = rec->fields[i].begin[j];
                         writer->_internal->buffer[writeIndex++] = c;
-                        if (c == '"' && writer->_internal->STD_QUALIFIERS) {
+                        if (c == '"' && writer->quotes == QUOTE_RFC4180) {
                                 writer->_internal->buffer[writeIndex++] = '"';
-                                quotes = 1;
+                                quoteCurrentField = TRUE;
                         }
-                        if (writer->_internal->qualifiers && !quotes) {
+                        if (writer->quotes && !quoteCurrentField) {
                                 if (strhaschar("\"\n\r", c))
-                                        quotes = 1;
-                                else if (c == writer->_internal->delim[delimI])
+                                        quoteCurrentField = 1;
+                                else if (c == writer->delimiter[delimI])
                                         ++delimI;
-                                else if (c == writer->_internal->delim[0])
+                                else if (c == writer->delimiter[0])
                                         delimI = 1;
                                 else
                                         delimI = 0;
 
-                                if (delimI == writer->_internal->delimlen)
-                                        quotes = 1;
+                                if (delimI == writer->_internal->delimLen)
+                                        quoteCurrentField = TRUE;
                         }
                 }
                 writer->_internal->buffer[writeIndex] = '\0';
-                if (quotes)
+                if (quoteCurrentField)
                         fprintf(writer->_internal->file, "\"%s\"", writer->_internal->buffer);
                 else
                         fputs(writer->_internal->buffer, writer->_internal->file);
 
-                if (i != writer->size - 1)
-                        fputs(writer->_internal->delim, writer->_internal->file);
+                if (i != rec->size - 1)
+                        fputs(writer->delimiter, writer->_internal->file);
         }
-        fputs(writer->_internal->lineEnding, writer->_internal->file);
+        fputs(writer->lineEnding, writer->_internal->file);
 }
 
-void csvw_update_filename()
-{
-        char indexStr[12];
-        snprintf(indexStr, 12, "%d", ++writer->_internal->fileIndex);
-
-        char* extension = getext(writer->_internal->fileName);
-        char* noExtension = getnoext(writer->_internal->fileName_org);
-
-        strcpy(writer->_internal->fileName, noExtension);
-        strcat(writer->_internal->fileName, indexStr);
-        strcat(writer->_internal->fileName, extension);
-
-        free(extension);
-        free(noExtension);
-}
+//void csvw_update_filename(struct csv_writer* writer)
+//{
+//        char indexStr[12];
+//        snprintf(indexStr, 12, "%d", ++writer->_internal->fileIndex);
+//
+//        char* extension = getext(writer->filename);
+//        char* noExtension = getnoext(writer->filename_org);
+//
+//        strcpy(writer->filename, noExtension);
+//        strcat(writer->filename, indexStr);
+//        strcat(writer->filename, extension);
+//
+//        free(extension);
+//        free(noExtension);
+//}
 
 void csv_writer_close(struct csv_writer* writer)
 {
@@ -96,10 +118,10 @@ void csv_writer_close(struct csv_writer* writer)
         EXIT_IF(fclose(writer->_internal->file) == EOF, writer->_internal->tempname);
         writer->_internal->file = NULL;
 
-        if (writer->_internal->fileName[0]) {
-                int ret = rename(writer->_internal->tempname, writer->_internal->fileName);
+        if (writer->filename[0]) {
+                int ret = rename(writer->_internal->tempname, writer->filename);
                 EXIT_IF(ret, writer->_internal->tempname);
-                writer->_internal->update_filename();
+                //csvw_update_filename();
         } else {
                 FILE* dumpFile = fopen(writer->_internal->tempname, "r");
                 EXIT_IF(!dumpFile, writer->_internal->tempname);
@@ -115,31 +137,62 @@ void csv_writer_close(struct csv_writer* writer)
 
 struct csv_writer* new_csv_writer()
 {
-        char pwd[PATH_MAX];
-        struct statvfs stats;
+        if (!strcmp(csv_tempdir, "")) {
+                char pwd[PATH_MAX];
+                struct statvfs stats;
 
-        EXIT_IF(!getcwd(pwd, sizeof(pwd)-10), "getcwd error");
-        statvfs(pwd, &stats);
+                EXIT_IF(!getcwd(pwd, sizeof(pwd)-10), "getcwd error");
+                statvfs(pwd, &stats);
 
-        /**
-         * If the partition we are currently in is low on
-         * available space, we use TMPDIR for temp files.
-         * This can be defined during compilation.
-         */
-        if (stats.f_bsize * stats.f_bavail < MIN_SPACE_AVAILABLE)
-                STRNCPY(writer->_internal->tempdir, TMPDIR_STR, PATH_MAX);
+                /**
+                 * If the partition we are currently in is low on
+                 * available space, we use TMPDIR for temp files.
+                 * This can be defined during compilation.
+                 */
+                if (stats.f_bsize * stats.f_bavail < MIN_SPACE_AVAILABLE)
+                        STRNCPY(csv_tempdir, TMPDIR_STR, PATH_MAX - 10);
+        }
 
-        //if (!writer->_internal->buffer) {
-        //        MALLOC(writer->_internal->buffer, CSV_MAX_FIELD_SIZE);
-        //}
+        struct csv_writer* writer = NULL;
+
+        MALLOC(writer, sizeof(*writer));
+        *writer = (struct csv_writer) {
+                NULL
+                ,""
+                ,","
+                ,"\n"
+                ,QUOTE_RFC4180
+        };
+
+        MALLOC(writer->_internal, sizeof(*writer->_internal));
+        *writer->_internal = (struct csv_write_internal) {
+                NULL    /* internal record */
+                ,""     /* tempname */
+                ,""     /* filename_org */
+                ,NULL   /* file */
+                ,NULL   /* buffer */
+                ,""     /* appendBuffer */
+                ,0      /* fieldsAllocated; */
+                ,1      /* delimLen */
+                ,0      /* bufferSize */
+                ,0      /* recordLen */
+                ,0      /* rows */
+                ,0      /* inlineBreaks */
+                ,0      /* normalOrg */
+        };
+
+        MALLOC(writer->_internal->buffer, CSV_BUFFER_FACTOR);
+
+        return writer;
+
 }
 
-void csv_writer_open()
+void csv_writer_open(struct csv_writer* writer)
 {
         //csvw_init();
 
-        if (csvr_get_allowstdchange()) {
-                STRNCPY(writer->_internal->tempname, writer->_internal->tempdir, PATH_MAX - 10);
+        if (TRUE /*csvr_get_allowstdchange() */) {
+                STRNCPY(writer->_internal->tempname, csv_tempdir, PATH_MAX - 10);
                 strcat(writer->_internal->tempname, "csv_XXXXXX");
                 int fd = mkstemp(writer->_internal->tempname);
                 set_tempoutputfile(writer->_internal->tempname);
@@ -152,7 +205,7 @@ void csv_writer_open()
 
 //void writer->_internal->destroy()
 //{
-//        //FREE(writer->_internal->delim);
+//        //FREE(writer->delimiter);
 //        //FREE(writer->_internal->buffer);
 //}
 

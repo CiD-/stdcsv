@@ -114,7 +114,7 @@ void parseargs(char c, struct csv_reader* reader, struct csv_writer* writer)
                 STRNCPY(reader->inlineBreak, optarg, 32);
                 break;
         case 'o': /* output-file */
-                STRNCPY(writer->fileName, optarg, PATH_MAX);
+                STRNCPY(writer->filename, optarg, PATH_MAX);
                 break;
         case 'W': /* windows-line-ending */
                 STRNCPY(writer->lineEnding, "\r\n", 3);
