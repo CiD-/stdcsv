@@ -321,7 +321,7 @@ struct csv_record* csv_get_record(struct csv_reader* reader)
         if (reader->_internal->recordLen == EOF) {
                 reader->_internal->fieldsAllocated = 0;
                 reader->normal = reader->_internal->normalOrg;
-                csv_destroy(reader);
+                //csv_destroy(reader);
                 return NULL;
         }
 
@@ -346,12 +346,11 @@ struct csv_record* csv_parse(struct csv_reader* reader, char* line)
                         record->fields[fieldIndex-1] = csv_parse_rfc4180(reader, &line);
                         break;
                 case QUOTE_WEAK:
-                        /* Implicit fallthrough if next field is not quoted */
-                        if (reader->quotes && line[0] == '"') {
+                        if (reader->quotes && line[0] == '"') { /* Implicit on purpose */
                                 record->fields[fieldIndex-1] = csv_parse_weak(reader, &line);
                                 break;
                         }
-                case QUOTE_NONE:
+                case QUOTE_NONE: /* Implicit on purpose */
                         record->fields[fieldIndex-1] = csv_parse_none(reader, &line);
                         break;
                 }
@@ -397,7 +396,7 @@ void csv_reader_open(struct csv_reader* reader, const char* fileName)
         }
 }
 
-struct csv_reader* new_csv_reader()
+struct csv_reader* csv_new_reader()
 {
         struct csv_reader* reader = NULL;
 
@@ -414,7 +413,7 @@ struct csv_reader* new_csv_reader()
         MALLOC(reader->_internal, sizeof(*reader->_internal));
         *reader->_internal = (struct csv_read_internal) {
                 NULL    /* internal record */
-                ,NULL   /* file */
+                ,stdin  /* file */
                 ,NULL   /* buffer */
                 ,""     /* appendBuffer */
                 ,0      /* fieldsAllocated; */
@@ -446,13 +445,6 @@ struct csv_reader* new_csv_reader()
         return reader;
 }
 
-//void csv_destroy(struct csv_reader* reader)
-//{
-//        FREE(reader->_internal->buffer);
-//        FREE(reader->_internal);
-//        FREE(reader);
-//}
-
 void csv_growrecord(struct csv_reader* reader)
 {
         ++reader->_internal->fieldsAllocated;
@@ -462,5 +454,12 @@ void csv_growrecord(struct csv_reader* reader)
         } else {
                 MALLOC(reader->_internal->_record->fields, arraySize);
         }
+}
+
+void csv_destroy_reader(struct csv_reader* reader)
+{
+        FREE(reader->_internal->buffer);
+        FREE(reader->_internal);
+        FREE(reader);
 }
 

@@ -89,13 +89,13 @@ void parseargs(char c, struct csv_reader* reader, struct csv_writer* writer)
                 break;
         case 'Q': /* in-quotes */
                 if(strcasecmp(optarg, "ALL"))
-                        writer->quotes = QUOTE_ALL;
+                        reader->quotes = QUOTE_ALL;
                 else if (!strcasecmp(optarg, "WEAK"))
-                        writer->quotes = QUOTE_WEAK;
+                        reader->quotes = QUOTE_WEAK;
                 else if (!strcasecmp(optarg, "NONE"))
-                        writer->quotes = QUOTE_NONE;
+                        reader->quotes = QUOTE_NONE;
                 else if (!strcasecmp(optarg, "RFC4180"))
-                        writer->quotes = QUOTE_RFC4180;
+                        reader->quotes = QUOTE_RFC4180;
                 else {
                         fprintf(stderr, "Invalid quote option: %s", optarg);
                         exit(EXIT_FAILURE);
@@ -114,7 +114,8 @@ void parseargs(char c, struct csv_reader* reader, struct csv_writer* writer)
                 STRNCPY(reader->inlineBreak, optarg, 32);
                 break;
         case 'o': /* output-file */
-                STRNCPY(writer->filename, optarg, PATH_MAX);
+                //STRNCPY(writer->filename, optarg, PATH_MAX);
+                csv_writer_open(writer, optarg);
                 break;
         case 'W': /* windows-line-ending */
                 STRNCPY(writer->lineEnding, "\r\n", 3);
@@ -158,27 +159,28 @@ int main (int argc, char **argv)
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        struct csv_reader* reader = NULL;
-        struct csv_writer* writer = NULL;
+        struct csv_reader* reader = csv_new_reader();
+        struct csv_writer* writer = csv_new_writer();
         struct csv_record* record = NULL;
 
         while ( (c = getopt_long (argc, argv, "rhniqQcCN:D:d:R:o:W",
                                   long_options, &option_index)) != -1)
                 parseargs(c, reader, writer);
 
-        //do {
-        //        if (optind == argc)
-        //                csvr_init(NULL);
-        //        else
-        //                csvr_init(argv[optind++]);
+        do {
+                /** If no files were provided, we read stdin **/
+                if (optind != argc)
+                        csv_reader_open(reader, argv[optind++]);
 
-        //        //struct csv_record rec = blank_record;
+                while ( (record = csv_get_record(reader)) )
+                        csv_write_record(writer, record);
 
-        //        csvw_open();
-        //        while (csvr_get_record(&rec))
-        //                csvw_writeline_d(&rec, csvr_get_delim());
-        //        csvw_close();
-        //} while (optind < argc);
+                csv_writer_close(writer);
+
+        } while (optind < argc);
+
+        csv_destroy_reader(reader);
+        csv_destroy_writer(writer);
 
         return 0;
 }

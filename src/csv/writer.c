@@ -12,8 +12,9 @@ static char csv_tempdir[PATH_MAX-10] = "";
  * Internal Structure
  */
 struct csv_write_internal {
-        struct csv_record* _record;
+        //struct csv_record* _record;
         char tempname[PATH_MAX];
+        char filename[PATH_MAX];
         char filename_org[PATH_MAX];
         FILE* file;
         char* buffer;
@@ -35,8 +36,8 @@ struct csv_write_internal {
 
 void csv_writer_reset(struct csv_writer *writer)
 {
-        if (writer->filename[0]) {
-                STRNCPY(writer->filename, writer->_internal->filename_org, PATH_MAX);
+        if (writer->_internal->filename[0]) {
+                STRNCPY(writer->_internal->filename, writer->_internal->filename_org, PATH_MAX);
         }
 
         EXIT_IF(fclose(writer->_internal->file) == EOF, writer->_internal->tempname);
@@ -46,7 +47,7 @@ void csv_writer_reset(struct csv_writer *writer)
         EXIT_IF(!writer->_internal->file, writer->_internal->tempname);
 }
 
-void csvw_writeline(struct csv_writer* writer)
+void csv_write_record(struct csv_writer* writer, struct csv_record* rec)
 {
         int i = 0;
         unsigned int j = 0;
@@ -55,7 +56,7 @@ void csvw_writeline(struct csv_writer* writer)
         uint delimI = 0;
         char c = 0;
 
-        struct csv_record* rec = writer->_internal->_record;
+        //struct csv_record* rec = writer->_internal->_record;
 
         for (i = 0; i < rec->size; ++i) {
                 quoteCurrentField = 0;
@@ -99,12 +100,12 @@ void csvw_writeline(struct csv_writer* writer)
 //        char indexStr[12];
 //        snprintf(indexStr, 12, "%d", ++writer->_internal->fileIndex);
 //
-//        char* extension = getext(writer->filename);
+//        char* extension = getext(writer->_internal->filename);
 //        char* noExtension = getnoext(writer->filename_org);
 //
-//        strcpy(writer->filename, noExtension);
-//        strcat(writer->filename, indexStr);
-//        strcat(writer->filename, extension);
+//        strcpy(writer->_internal->filename, noExtension);
+//        strcat(writer->_internal->filename, indexStr);
+//        strcat(writer->_internal->filename, extension);
 //
 //        free(extension);
 //        free(noExtension);
@@ -112,14 +113,14 @@ void csvw_writeline(struct csv_writer* writer)
 
 void csv_writer_close(struct csv_writer* writer)
 {
-        //if (!csvr_get_allowstdchange())
-        //        return;
+        if (writer->_internal->file == stdin)
+                return;
 
         EXIT_IF(fclose(writer->_internal->file) == EOF, writer->_internal->tempname);
         writer->_internal->file = NULL;
 
-        if (writer->filename[0]) {
-                int ret = rename(writer->_internal->tempname, writer->filename);
+        if (writer->_internal->filename[0]) {
+                int ret = rename(writer->_internal->tempname, writer->_internal->filename);
                 EXIT_IF(ret, writer->_internal->tempname);
                 //csvw_update_filename();
         } else {
@@ -135,7 +136,7 @@ void csv_writer_close(struct csv_writer* writer)
         }
 }
 
-struct csv_writer* new_csv_writer()
+struct csv_writer* csv_new_writer()
 {
         if (!strcmp(csv_tempdir, "")) {
                 char pwd[PATH_MAX];
@@ -158,7 +159,7 @@ struct csv_writer* new_csv_writer()
         MALLOC(writer, sizeof(*writer));
         *writer = (struct csv_writer) {
                 NULL
-                ,""
+                //,""
                 ,","
                 ,"\n"
                 ,QUOTE_RFC4180
@@ -166,10 +167,11 @@ struct csv_writer* new_csv_writer()
 
         MALLOC(writer->_internal, sizeof(*writer->_internal));
         *writer->_internal = (struct csv_write_internal) {
-                NULL    /* internal record */
-                ,""     /* tempname */
+                //NULL    /* internal record */
+                ""     /* tempname */
+                ,""     /* filename */
                 ,""     /* filename_org */
-                ,NULL   /* file */
+                ,stdout /* file */
                 ,NULL   /* buffer */
                 ,""     /* appendBuffer */
                 ,0      /* fieldsAllocated; */
@@ -187,11 +189,11 @@ struct csv_writer* new_csv_writer()
 
 }
 
-void csv_writer_open(struct csv_writer* writer)
+void csv_writer_open(struct csv_writer* writer, const char* filename)
 {
         //csvw_init();
-
         if (TRUE /*csvr_get_allowstdchange() */) {
+                STRNCPY(writer->_internal->filename, filename, PATH_MAX);
                 STRNCPY(writer->_internal->tempname, csv_tempdir, PATH_MAX - 10);
                 strcat(writer->_internal->tempname, "csv_XXXXXX");
                 int fd = mkstemp(writer->_internal->tempname);
@@ -203,10 +205,11 @@ void csv_writer_open(struct csv_writer* writer)
         }
 }
 
-//void writer->_internal->destroy()
-//{
-//        //FREE(writer->delimiter);
-//        //FREE(writer->_internal->buffer);
-//}
+void csv_destroy_writer(struct csv_writer* writer)
+{
+        FREE(writer->_internal->buffer);
+        FREE(writer->_internal);
+        FREE(writer);
+}
 
 

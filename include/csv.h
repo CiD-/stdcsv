@@ -34,12 +34,15 @@
 #include <signal.h>
 #include "util.h"
 
+/** Incomplete definition in main **/
+/*
 #define csv_destroy(csv_struct)                 \
 {                                               \
         FREE(csv_struct->_internal->buffer);    \
         FREE(csv_struct->_internal);            \
         FREE(csv_struct);                       \
 }
+*/
 
 /* Structure containing an individual field */
 struct csv_field {
@@ -68,7 +71,7 @@ struct csv_reader {
 
 struct csv_writer {
         struct csv_write_internal* _internal;
-        char filename[PATH_MAX];
+        //char filename[PATH_MAX];
         char delimiter[32];
         char lineEnding[3];
         int quotes;
@@ -131,7 +134,7 @@ void csv_reader_open(struct csv_reader*, const char* fileName);
 /**
  * Buffers for reading and appending are allocated here.
  */
-struct csv_reader* new_csv_reader();
+struct csv_reader* csv_new_reader();
 
 /**
  * Free all heap memory.
@@ -149,7 +152,7 @@ struct csv_record* csv_parse(struct csv_reader*, char* line);
 /**
  *
  */
-void csv_writer_open(struct csv_writer*);
+void csv_writer_open(struct csv_writer*, const char* fileName);
 
 
 /**
@@ -159,12 +162,13 @@ void csv_writer_open(struct csv_writer*);
  * MIN_SPACE_AVAILABLE, then we use the TMPDIR (defined during
  * compilation). If TMPDIR is not defined during compilation, use /tmp.
  */
-struct csv_writer* new_csv_writer();
+struct csv_writer* csv_new_writer();
 
 /**
  * Relese allocated heap resources
  */
-//void csvw_destroy();
+void csv_destroy_reader(struct csv_reader*);
+void csv_destroy_writer(struct csv_writer*);
 
 /**
  * Dump temp file to destination file/stdout
@@ -174,7 +178,7 @@ void csv_writer_close(struct csv_writer*);
 /**
  * Loop through array of struct csv_field, and print the line to csvw_file.
  */
-void csv_writeline(struct csv_writer*);
+void csv_write_record(struct csv_writer*, struct csv_record*);
 
 /**
  *

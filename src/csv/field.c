@@ -1,6 +1,6 @@
 #include "csv.h"
 
-const struct csv_record blank_record = {NULL, 0, 0};
+//const struct csv_record blank_record = {NULL, 0, 0};
 
 const char* csv_get_end(struct csv_field *s)
 {
