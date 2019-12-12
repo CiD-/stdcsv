@@ -8,20 +8,18 @@
 #define STRING_VALUE(arg) #arg
 #define TMPDIR_STR STRING_VALUE(TMPDIR)
 
-#define MIN_SPACE_AVAILABLE     10000000000
+#define MIN_SPACE_AVAILABLE     5000000000
 
-#define CSV_DONE                -4
-#define CSV_DUMP                -3
-#define CSV_SKIP_LINE           -2
 #define CSV_RESET               -1
-#define CSV_BUFFER_FACTOR       100
+#define CSV_BUFFER_FACTOR       128
 #define CSV_MAX_FIELD_SIZE      10000
 #define CSV_MAX_RECORD_SIZE     50000
+#define CSV_NORMAL_OPEN         -2
 
-#define CSVR_STD_QUALIFIERS     csvr_qualifiers == 2
-#define CSVR_NORMAL_OPEN        -2
-
-#define CSVW_STD_QUALIFIERS     csvw_qualifiers == 2
+#define QUOTE_ALL         3
+#define QUOTE_RFC4180     2
+#define QUOTE_WEAK        1
+#define QUOTE_NONE        0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,38 +30,70 @@
 #include <signal.h>
 #include "util.h"
 
+/** Incomplete definition in main **/
+/*
+#define csv_destroy(csv_struct)                 \
+{                                               \
+        FREE(csv_struct->_internal->buffer);    \
+        FREE(csv_struct->_internal);            \
+        FREE(csv_struct);                       \
+}
+*/
+
 /* Structure containing an individual field */
 struct csv_field {
         const char* begin;
         size_t length;
 };
 
+/* Forward declaration of internal structures */
+struct csv_read_internal;
+struct csv_write_internal;
+
 /* Structure containing dynamic array of fields */
 struct csv_record {
         struct csv_field* fields;
         int size;
-        int _allocated_size;
+};
+
+struct csv_reader {
+        struct csv_read_internal* _internal;
+        char delimiter[32];
+        char inlineBreak[32];
+        int quotes;
+        int normal;
+        int failsafeMode;
+};
+
+struct csv_writer {
+        struct csv_write_internal* _internal;
+        //char filename[PATH_MAX];
+        char delimiter[32];
+        char lineEnding[3];
+        int quotes;
 };
 
 extern const struct csv_record blank_record;
 
+/** csv_field **/
+
 /**
  * Return char* to end of field
  */
-const char* csv_get_end(struct csv_field s);
+const char* csv_get_end(struct csv_field* s);
 
 /**
  * Provide dynamically allocated char*
  * copy of the field
  */
-char* csv_newstring(struct csv_field s);
+char* csv_newstring(struct csv_field* s);
 
 /**
  * Assigns buffer to a copy of the data within
  * the field. This char* should already be allocated.
  * If strncpy fails, return -1
  */
-int csv_get_string(struct csv_field s, char* buffer);
+int csv_get_string(struct csv_field* s, char* buffer);
 
 /**
  * Initializes and returns a dynamic array of
@@ -72,59 +102,15 @@ int csv_get_string(struct csv_field s, char* buffer);
 //struct csv_field** csv_init();
 
 
-/**
- * Accessors
- */
-char* csvr_get_delim();
-int csvr_get_allowstdchange();
-
-/**
- * Mutators
- */
-void csvr_set_delim(const char* delim);
-void csvr_set_qualifiers(int qualifiers);
-void csvr_set_normal(int normal);
-void csvr_set_internalbreak(const char* internalBreak);
-void csvw_set_delim(const char* delim);
-void csvw_set_inplaceedit(int i);
-void csvw_set_qualifiers(int i);
-void csvw_set_lineending(const char* lineEnding);
-void csvw_set_filename(const char* filename);
-
+/** csv_reader **/
 
 /**
  * Methods
  */
 
-/**
- *
- */
-void csvw_open();
 
 /**
- * csvr_nextfield takes a pointer to the beginning of a field.
- * *begin is searched for the next delimiter.
- *
- * Returns:
- *      - struct csv_field representing parsed field
- *      - NULL on failure
- */
-struct csv_field csvr_nextfield(char** begin);
-
-/**
- * csvr_nextquoted behaves the same as csvr_nextfield
- * except that it expects the next field to be quoted.
- * *begin is searched for a terminating quote and
- * a delimiter.
- *
- * Returns:
- *      - struct csv_field representing parsed field
- *      - NULL on failure
- */
-struct csv_field csvr_nextquoted(char** begin);
-
-/**
- * csv_getfields takes an array of pointers to csv_field's.
+ * csv_get_record takes an array of pointers to csv_field's.
  * The variable fieldCount is set within this function to the
  * number of fields in the current csv line.  If this function
  * fails, fieldCount will be set to -1.
@@ -134,29 +120,35 @@ struct csv_field csvr_nextquoted(char** begin);
  *        represents the parsed fields from the next line.
  *      - NULL if EOF
  */
-int csvr_get_record(struct csv_record *rec);
+struct csv_record* csv_get_record(struct csv_reader*);
 
 /**
  *
  */
-//int csvr_open(const char* fileName);
+void csv_reader_open(struct csv_reader*, const char* fileName);
 
 /**
  * Buffers for reading and appending are allocated here.
  */
-void csvr_init(const char* fileName);
+struct csv_reader* csv_new_reader();
 
 /**
  * Free all heap memory.
  */
-void csvr_destroy();
+//void csv_destroy(struct csv_reader*);
 
 /**
- * csvr_growrecord allocates the initial memory for a
- * struct csv_field. It also reallocs an additional fields
- * if fields is already allocated a pointer.
+ *
  */
-void csvr_growrecord(struct csv_record *record);
+struct csv_record* csv_parse(struct csv_reader*, char* line);
+
+
+/** csv_writer **/
+
+/**
+ *
+ */
+void csv_writer_open(struct csv_writer*, const char* fileName);
 
 
 /**
@@ -166,27 +158,28 @@ void csvr_growrecord(struct csv_record *record);
  * MIN_SPACE_AVAILABLE, then we use the TMPDIR (defined during
  * compilation). If TMPDIR is not defined during compilation, use /tmp.
  */
-void csvw_init();
+struct csv_writer* csv_new_writer();
 
 /**
  * Relese allocated heap resources
  */
-//void csvw_destroy();
+void csv_destroy_reader(struct csv_reader*);
+void csv_destroy_writer(struct csv_writer*);
 
 /**
  * Dump temp file to destination file/stdout
  */
-void csvw_close();
-
-/**
- * wrapper for csvw_writeline with extra field for delimiter. if csvw_delim
- * is not defined, we set it equal to the provided delim.
- */
-void csvw_writeline_d(struct csv_record* rec, char* delim);
+void csv_writer_close(struct csv_writer*);
 
 /**
  * Loop through array of struct csv_field, and print the line to csvw_file.
  */
-void csvw_writeline(struct csv_record* rec);
+void csv_write_record(struct csv_writer*, struct csv_record*);
+
+/**
+ *
+ */
+void csv_writer_reset(struct csv_writer*);
+
 
 #endif

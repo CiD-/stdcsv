@@ -1,7 +1,7 @@
 PREFIX		?= /usr/local
 
 CC       	:= gcc
-CFLAGS 	 	+= -Wall -Wextra
+CFLAGS 	 	+= -Wall -Wextra -Wpedantic
 LDFLAGS  	+=
 BUILD    	:= ./build
 OBJ_DIR  	:= $(BUILD)/objects/

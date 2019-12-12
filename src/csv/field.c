@@ -1,26 +1,26 @@
 #include "csv.h"
 
-const struct csv_record blank_record = {NULL, 0, 0};
+//const struct csv_record blank_record = {NULL, 0, 0};
 
-const char* csv_get_end(struct csv_field s)
+const char* csv_get_end(struct csv_field *s)
 {
-        return s.begin + s.length;
+        return s->begin + s->length;
 }
 
-char* csv_newstring(struct csv_field s)
+char* csv_newstring(struct csv_field *s)
 {
         char* newString = NULL;
-        MALLOC(newString, s.length + 1);
+        MALLOC(newString, s->length + 1);
         csv_get_string(s, newString);
         return newString;
 }
 
-int csv_get_string(struct csv_field s, char* buffer)
+int csv_get_string(struct csv_field *s, char* buffer)
 {
-        char* dest = strncpy(buffer, s.begin, s.length);
+        char* dest = strncpy(buffer, s->begin, s->length);
         if(!dest)
                 return -1;
-        buffer[s.length] = '\0';
+        buffer[s->length] = '\0';
         return 0;
 }
 
