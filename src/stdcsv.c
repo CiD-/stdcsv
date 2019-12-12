@@ -8,30 +8,28 @@ static const char* helpString =
 "\nUsage: stdcsv [vhniqQxXS] [-N field_count] [-dD delimiter]"
 "\n       [-r new_line_replacement] [-o outputfile] input_file"
 "\n"
-"\n-c|--concatenate       Concatenate all input files together. Assuming a"
-"\n                       header, the first row only prints for first file."
-"\n-C|--concatenate-all   Same as -c except we assume there is no header."
-"\n                       All rows are printed for all files."
-"\n-d|--in-delimiter X    Specify an input delimiter."
-"\n                       Default delimiters: comma, pipe, tab"
-"\n-D|--out-delimiter X   Specify an output delimiter."
-"\n                       By default, the input delimiter is used."
-"\n-h|--help              Print this help menu."
-"\n-i|--in-place          Files edited in place. This will not work for stdin."
-"\n-M|--cr                Output will have Macintosh line endings."
-"\n-n|--normalize         Output field count will match header."
-"\n-N|--num-fields X      Specify number of output fields (Implies -n)"
-"\n-o|--out-file X        Specify an output file. Default is stdout."
-"\n                       Note: This implies -c concatenation"
-"\n-q|--suppress-quotes   Do not quote fields in the output."
-"\n-Q|--ignore-quotes     Ignore input quotes. All quotes will be in fields."
-"\n-r|--no-embedded-nl    Remove embedded new lines."
-"\n-R|--embedded-nl-sub X Specify a string to replace embedded new lines."
-//"\n-v|--verbose           More detailed output."
-"\n-W|--crlf              Output will have Windows line endings."
-"\n-X|--no-rfc4180-out    Embedded quotes won't be duplicated in the output."
-"\n-x|--no-rfc4180-in     Embedded quotes won't be duplicated in the input."
-"\n                       More info: https://www.ietf.org/rfc/rfc4180.txt"
+"\n-c|--concatenate          Concatenate all input files together. Assuming a"
+"\n                          header, the first row only prints for first file."
+"\n-C|--concatenate-all      Same as -c except we assume there is no header."
+"\n                          All rows are printed for all files."
+"\n-d|--in-delimiter arg     Specify an input delimiter."
+"\n                          Default delimiters: comma, pipe, tab"
+"\n-D|--out-delimiter arg    Specify an output delimiter."
+"\n                          By default, the input delimiter is used."
+"\n-h|--help                 Print this help menu."
+"\n-i|--in-place             Files edited in place. This will not work for stdin."
+"\n-M|--cr                   Output will have Macintosh line endings."
+"\n-n|--normalize            Output field count will match header."
+"\n-N|--num-fields arg       Specify number of output fields (Implies -n)"
+"\n-o|--out-file arg         Specify an output file. Default is stdout."
+"\n                          Note: This implies -c concatenation"
+"\n-q|--out-quotes           Do not quote fields in the output."
+"\n-Q|--in-quotes            Ignore input quotes. All quotes will be in fields."
+"\n-r|--no-embedded-nl       Remove embedded new lines."
+"\n-R|--replace-newline arg  Specify a string to replace embedded new lines."
+//"\n-v|--verbose              More detailed output."
+"\n-W|--crlf                 Output will have Windows line endings."
+"\n                          More info: https://www.ietf.org/rfc/rfc4180.txt"
 "\n"
 "\nRFC4180 is not technically a standard, so many csv files will not follow"
 "\nthe rules proposed by it. If no input quote options are specified, stdcsv"
@@ -74,7 +72,7 @@ void parseargs(char c, struct csv_reader* reader, struct csv_writer* writer)
                 //csvw_set_inplaceedit(1);
                 break;
         case 'q': /* out-quotes */
-                if(strcasecmp(optarg, "ALL"))
+                if(!strcasecmp(optarg, "ALL"))
                         writer->quotes = QUOTE_ALL;
                 else if (!strcasecmp(optarg, "WEAK"))
                         writer->quotes = QUOTE_WEAK;
@@ -88,7 +86,7 @@ void parseargs(char c, struct csv_reader* reader, struct csv_writer* writer)
                 }
                 break;
         case 'Q': /* in-quotes */
-                if(strcasecmp(optarg, "ALL"))
+                if(!strcasecmp(optarg, "ALL"))
                         reader->quotes = QUOTE_ALL;
                 else if (!strcasecmp(optarg, "WEAK"))
                         reader->quotes = QUOTE_WEAK;

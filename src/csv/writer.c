@@ -19,18 +19,9 @@ struct csv_write_internal {
         FILE* file;
         char* buffer;
 
-        char appendBuffer[CSV_BUFFER_FACTOR];
-        uint fieldsAllocated;
         uint delimLen;
         int bufferSize;
         int recordLen;
-
-        /* Statistics */
-        uint rows;
-        uint inlineBreaks;
-
-        /* Properties */
-        int normalOrg;
 };
 
 
@@ -56,16 +47,17 @@ void csv_write_record(struct csv_writer* writer, struct csv_record* rec)
         uint delimI = 0;
         char c = 0;
 
-        //struct csv_record* rec = writer->_internal->_record;
-
         for (i = 0; i < rec->size; ++i) {
-                quoteCurrentField = 0;
+                if (i)
+                        fputs(writer->delimiter, writer->_internal->file);
+
+                quoteCurrentField = (writer->quotes == QUOTE_ALL);
                 writeIndex = 0;
                 /* TODO - up front size check. */
                 for (j = 0; j < rec->fields[i].length; ++j) {
                         c = rec->fields[i].begin[j];
                         writer->_internal->buffer[writeIndex++] = c;
-                        if (c == '"' && writer->quotes == QUOTE_RFC4180) {
+                        if (c == '"' && writer->quotes >= QUOTE_RFC4180) {
                                 writer->_internal->buffer[writeIndex++] = '"';
                                 quoteCurrentField = TRUE;
                         }
@@ -74,10 +66,8 @@ void csv_write_record(struct csv_writer* writer, struct csv_record* rec)
                                         quoteCurrentField = 1;
                                 else if (c == writer->delimiter[delimI])
                                         ++delimI;
-                                else if (c == writer->delimiter[0])
-                                        delimI = 1;
                                 else
-                                        delimI = 0;
+                                        delimI = (c == writer->delimiter[0]) ? 1 : 0;
 
                                 if (delimI == writer->_internal->delimLen)
                                         quoteCurrentField = TRUE;
@@ -88,9 +78,6 @@ void csv_write_record(struct csv_writer* writer, struct csv_record* rec)
                         fprintf(writer->_internal->file, "\"%s\"", writer->_internal->buffer);
                 else
                         fputs(writer->_internal->buffer, writer->_internal->file);
-
-                if (i != rec->size - 1)
-                        fputs(writer->delimiter, writer->_internal->file);
         }
         fputs(writer->lineEnding, writer->_internal->file);
 }
@@ -167,20 +154,14 @@ struct csv_writer* csv_new_writer()
 
         MALLOC(writer->_internal, sizeof(*writer->_internal));
         *writer->_internal = (struct csv_write_internal) {
-                //NULL    /* internal record */
-                ""     /* tempname */
+                ""      /* tempname */
                 ,""     /* filename */
                 ,""     /* filename_org */
                 ,stdout /* file */
                 ,NULL   /* buffer */
-                ,""     /* appendBuffer */
-                ,0      /* fieldsAllocated; */
                 ,1      /* delimLen */
                 ,0      /* bufferSize */
                 ,0      /* recordLen */
-                ,0      /* rows */
-                ,0      /* inlineBreaks */
-                ,0      /* normalOrg */
         };
 
         MALLOC(writer->_internal->buffer, CSV_BUFFER_FACTOR);
