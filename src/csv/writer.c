@@ -125,22 +125,6 @@ void csv_writer_close(struct csv_writer* writer)
 
 struct csv_writer* csv_new_writer()
 {
-        if (!strcmp(csv_tempdir, "")) {
-                char pwd[PATH_MAX];
-                struct statvfs stats;
-
-                EXIT_IF(!getcwd(pwd, sizeof(pwd)-10), "getcwd error");
-                statvfs(pwd, &stats);
-
-                /**
-                 * If the partition we are currently in is low on
-                 * available space, we use TMPDIR for temp files.
-                 * This can be defined during compilation.
-                 */
-                if (stats.f_bsize * stats.f_bavail < MIN_SPACE_AVAILABLE)
-                        STRNCPY(csv_tempdir, TMPDIR_STR, PATH_MAX - 10);
-        }
-
         struct csv_writer* writer = NULL;
 
         MALLOC(writer, sizeof(*writer));
@@ -157,7 +141,7 @@ struct csv_writer* csv_new_writer()
                 ""      /* tempname */
                 ,""     /* filename */
                 ,""     /* filename_org */
-                ,stdout /* file */
+                ,NULL   /* file */
                 ,NULL   /* buffer */
                 ,1      /* delimLen */
                 ,0      /* bufferSize */
@@ -166,24 +150,39 @@ struct csv_writer* csv_new_writer()
 
         MALLOC(writer->_internal->buffer, CSV_BUFFER_FACTOR);
 
+        /* Open a temp FILE* for writer->_internal->file.  This will
+         * be used for output in case we do a reset. 
+         */
+        if (!strcmp(csv_tempdir, "")) {
+                char pwd[PATH_MAX];
+                struct statvfs stats;
+
+                EXIT_IF(!getcwd(pwd, sizeof(pwd)-10), "getcwd error");
+                statvfs(pwd, &stats);
+
+                /* If the partition we are currently in is low on
+                 * available space, we use TMPDIR for temp files.
+                 * This can be defined during compilation.
+                 */
+                if (stats.f_bsize * stats.f_bavail < MIN_SPACE_AVAILABLE)
+                        STRNCPY(csv_tempdir, TMPDIR_STR, PATH_MAX - 10);
+        }
+
+        STRNCPY(writer->_internal->tempname, csv_tempdir, PATH_MAX - 10);
+        strcat(writer->_internal->tempname, "csv_XXXXXX");
+        int fd = mkstemp(writer->_internal->tempname);
+        writer->_internal->file = fdopen(fd, "w");
+        EXIT_IF(!writer->_internal->file, writer->_internal->tempname);
+
+        set_tempoutputfile(writer->_internal->tempname);
+
         return writer;
 
 }
 
 void csv_writer_open(struct csv_writer* writer, const char* filename)
 {
-        //csvw_init();
-        if (TRUE /*csvr_get_allowstdchange() */) {
-                STRNCPY(writer->_internal->filename, filename, PATH_MAX);
-                STRNCPY(writer->_internal->tempname, csv_tempdir, PATH_MAX - 10);
-                strcat(writer->_internal->tempname, "csv_XXXXXX");
-                int fd = mkstemp(writer->_internal->tempname);
-                set_tempoutputfile(writer->_internal->tempname);
-                writer->_internal->file = fdopen(fd, "w");
-                EXIT_IF(!writer->_internal->file, writer->_internal->tempname);
-        } else {
-                writer->_internal->file = stdout;
-        }
+        STRNCPY(writer->_internal->filename, filename, PATH_MAX);
 }
 
 void csv_destroy_writer(struct csv_writer* writer)

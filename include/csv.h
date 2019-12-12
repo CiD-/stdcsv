@@ -10,14 +10,10 @@
 
 #define MIN_SPACE_AVAILABLE     5000000000
 
-#define CSV_DONE                -4
-#define CSV_DUMP                -3
-#define CSV_SKIP_LINE           -2
-#define CSV_ERROR_QUOTES        -1
+#define CSV_RESET               -1
 #define CSV_BUFFER_FACTOR       128
 #define CSV_MAX_FIELD_SIZE      10000
 #define CSV_MAX_RECORD_SIZE     50000
-
 #define CSV_NORMAL_OPEN         -2
 
 #define QUOTE_ALL         3

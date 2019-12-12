@@ -8,51 +8,58 @@ static const char* helpString =
 "\nUsage: stdcsv [vhniqQxXS] [-N field_count] [-dD delimiter]"
 "\n       [-r new_line_replacement] [-o outputfile] input_file"
 "\n"
-"\n-c|--concatenate          Concatenate all input files together. Assuming a"
-"\n                          header, the first row only prints for first file."
-"\n-C|--concatenate-all      Same as -c except we assume there is no header."
-"\n                          All rows are printed for all files."
+//"\n-c|--concat               Concatenate all input files together. Assuming a"
+//"\n                          header, the first row only prints for first file."
+//"\n-C|--concat-all           Same as -c except we assume there is no header."
+//"\n                          All rows are printed for all files."
 "\n-d|--in-delimiter arg     Specify an input delimiter."
 "\n                          Default delimiters: comma, pipe, tab"
 "\n-D|--out-delimiter arg    Specify an output delimiter."
 "\n                          By default, the input delimiter is used."
+"\n-f|--failsafe             Use failsafe mode (more info below)."
 "\n-h|--help                 Print this help menu."
 "\n-i|--in-place             Files edited in place. This will not work for stdin."
 "\n-M|--cr                   Output will have Macintosh line endings."
 "\n-n|--normalize            Output field count will match header."
 "\n-N|--num-fields arg       Specify number of output fields (Implies -n)"
-"\n-o|--out-file arg         Specify an output file. Default is stdout."
-"\n                          Note: This implies -c concatenation"
-"\n-q|--out-quotes           Do not quote fields in the output."
-"\n-Q|--in-quotes            Ignore input quotes. All quotes will be in fields."
+"\n-o|--output-file arg      Specify an output file. Default is stdout."
+"\n                          Note: This implies concatenation"
+"\n-q|--out-quotes arg       Specify quoting rule set for output."
+"\n-Q|--in-quotes arg        Specify quoting rule set for input."
+"\n                          Options: NONE, WEAK, RFC4180, ALL (details below)"
 "\n-r|--no-embedded-nl       Remove embedded new lines."
 "\n-R|--replace-newline arg  Specify a string to replace embedded new lines."
 //"\n-v|--verbose              More detailed output."
 "\n-W|--crlf                 Output will have Windows line endings."
-"\n                          More info: https://www.ietf.org/rfc/rfc4180.txt"
 "\n"
-"\nRFC4180 is not technically a standard, so many csv files will not follow"
-"\nthe rules proposed by it. If no input quote options are specified, stdcsv"
-"\nattempt to parse the input following the RFC4180 rules. If a violation is"
-"\nfound, parsing will restart from the beginning of the file (not stdin) with"
-"\nRFC4180 rules disabled. If more quoting violations are found, input quotes"
-"\nwill be turned off entirely. Appropriate warnings will be printed in these"
-"\ncases. If input is coming from stdin, the appropriate rules must be"
-"\nspecified in the options. Invalid input from stdin cannot be retrieved.\n";
+"\nFAILSAFE MODE"
+"\nFailsafe mode allows us to loop through the different CSV rule sets"
+"\nlooking for violations along the way.  If a violation is discovered,"
+"\nfile reading is restarted from the beginning of the file."
+"\nNOTE: Failsafe mode will be turned off when reading from stdin."
+"\n"
+"\nQUOTING RULES"
+"\n  NONE - Assume no text qualification."
+"\n  WEAK - Allow embedded quotes without duplication. No extra white space."
+"\n  RFC4180 (default) - The most flexible \"standard\" for delimited files."
+"\n  ALL - Quote every field. This option has no effect on input."
+"\n"
+"\n        More info: https://www.ietf.org/rfc/rfc4180.txt\n"
+;
 
 
 void parseargs(char c, struct csv_reader* reader, struct csv_writer* writer)
 {
         switch (c) {
         case 'c':
-                //csvr_set_cat(CSVR_CAT);
-                break;
+                fputs("Not yet implemented", stderr);
+                exit(EXIT_FAILURE);
         case 'C':
-                //csvr_set_cat(CSVR_CAT_ALL);
+                fputs("Not yet implemented", stderr);
+                exit(EXIT_FAILURE);
+        case 'f':
+                reader->failsafeMode = TRUE;
                 break;
-        //case 'v': /* verbose */
-        //        verbose = TRUE;
-        //        break;
         case 'h': /* help */
                 puts(helpString);
                 exit(EXIT_SUCCESS);
@@ -81,7 +88,10 @@ void parseargs(char c, struct csv_reader* reader, struct csv_writer* writer)
                 else if (!strcasecmp(optarg, "RFC4180"))
                         writer->quotes = QUOTE_RFC4180;
                 else {
-                        fprintf(stderr, "Invalid quote option: %s", optarg);
+                        fprintf(stderr
+                                ,"Invalid quote option: %s"
+                                 "\nOptions: NONE, WEAK, RFC4180, ALL"
+                                , optarg);
                         exit(EXIT_FAILURE);
                 }
                 break;
@@ -95,7 +105,10 @@ void parseargs(char c, struct csv_reader* reader, struct csv_writer* writer)
                 else if (!strcasecmp(optarg, "RFC4180"))
                         reader->quotes = QUOTE_RFC4180;
                 else {
-                        fprintf(stderr, "Invalid quote option: %s", optarg);
+                        fprintf(stderr
+                                ,"Invalid quote option: %s"
+                                 "\nOptions: NONE, WEAK, RFC4180, ALL"
+                                , optarg);
                         exit(EXIT_FAILURE);
                 }
                 break;
@@ -136,10 +149,10 @@ int main (int argc, char **argv)
         static struct option long_options[] =
         {
                 /* long option, (no) arg, 0, short option */
-                //{"verbose", no_argument, 0, 'v'},
                 {"help", no_argument, 0, 'h'},
                 {"normalize", no_argument, 0, 'n'},
                 {"num-fields", required_argument, 0, 'N'},
+                {"failsafe", no_argument, 0, 'f'},
                 {"in-place-edit", no_argument, 0, 'i'},
                 {"out-quotes", required_argument, 0, 'q'},
                 {"in-quotes", required_argument, 0, 'Q'},
@@ -148,8 +161,8 @@ int main (int argc, char **argv)
                 {"no-embedded-nl", no_argument, 0, 'r'},
                 {"embedded-nl-sub", required_argument, 0, 'R'},
                 {"output-file", required_argument, 0, 'o'},
-                {"concatenate", no_argument, 0, 'c'},
-                {"concatenate-all", no_argument, 0, 'C'},
+                {"concat", no_argument, 0, 'c'},
+                {"concat-all", no_argument, 0, 'C'},
                 {"crlf", no_argument, 0, 'W'},
                 {"cr", no_argument, 0, 'M' },
                 {0, 0, 0, 0}
@@ -161,21 +174,25 @@ int main (int argc, char **argv)
         struct csv_writer* writer = csv_new_writer();
         struct csv_record* record = NULL;
 
-        while ( (c = getopt_long (argc, argv, "rhniqQcCN:D:d:R:o:W",
+        while ( (c = getopt_long (argc, argv, "cCfhMniqQrWd:D:N:o:R:",
                                   long_options, &option_index)) != -1)
                 parseargs(c, reader, writer);
 
         do {
                 /** If no files were provided, we read stdin **/
                 if (optind != argc)
-                        csv_reader_open(reader, argv[optind++]);
+                        csv_reader_open(reader, argv[optind]);
 
-                while ( (record = csv_get_record(reader)) )
-                        csv_write_record(writer, record);
+                while ( (record = csv_get_record(reader)) ) {
+                        if (record->size == CSV_RESET)
+                                csv_writer_reset(writer);
+                        else
+                                csv_write_record(writer, record);
+                }
 
                 csv_writer_close(writer);
 
-        } while (optind < argc);
+        } while (++optind < argc);
 
         csv_destroy_reader(reader);
         csv_destroy_writer(writer);

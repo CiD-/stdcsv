@@ -33,7 +33,22 @@ struct csv_read_internal {
 /**
  * Internal prototypes
  */
+
+/**
+ * csv_determine_delimiter chooses between comma,
+ * pipe or tab depending on which one is found most.
+ * If none of these delimiters are found, use comma.
+ * If reader->delimiter was set externally, simply
+ * update reader->_internal->delimLen and return.
+ */
 void csv_determine_delimiter(struct csv_reader* reader, const char* header);
+
+/**
+ * csv_getline is a simple wrapper for safegetline
+ * that will allocate more buffer space in the event
+ * that we overflow. The input is copied to
+ * reader->_internal->buffer
+ */
 void csv_getline(struct csv_reader* reader);
 
 /**
@@ -80,16 +95,17 @@ struct csv_field csv_parse_rfc4180(struct csv_reader*, char** begin);
 
 void csv_lowerstandard(struct csv_reader* reader)
 {
-        if (!reader->failsafeMode) {
+        if (!reader->failsafeMode || reader->_internal->file == stdin) {
                 switch(reader->quotes) {
-                case QUOTE_WEAK:
-                        fprintf(stderr,
-                                "Line %d: Qualifier issue.\n",
-                                1 + reader->_internal->rows + reader->_internal->inlineBreaks);
-                        break;
+                case QUOTE_ALL:
                 case QUOTE_RFC4180:
                         fprintf(stderr,
                                 "Line %d: RFC4180 Qualifier issue.\n",
+                                1 + reader->_internal->rows + reader->_internal->inlineBreaks);
+                        break;
+                case QUOTE_WEAK:
+                        fprintf(stderr,
+                                "Line %d: Qualifier issue.\n",
                                 1 + reader->_internal->rows + reader->_internal->inlineBreaks);
                         break;
                 default:
@@ -100,14 +116,15 @@ void csv_lowerstandard(struct csv_reader* reader)
         }
 
         switch(reader->quotes) {
-        case QUOTE_WEAK:
-                fprintf(stderr,
-                        "Line %d: Qualifier issue. Quotes disabled.\n",
-                        1 + reader->_internal->rows + reader->_internal->inlineBreaks);
-                break;
+        case QUOTE_ALL:
         case QUOTE_RFC4180:
                 fprintf(stderr,
                         "Line %d: Qualifier issue. RFC4180 quotes disabled.\n",
+                        1 + reader->_internal->rows + reader->_internal->inlineBreaks);
+                break;
+        case QUOTE_WEAK:
+                fprintf(stderr,
+                        "Line %d: Qualifier issue. Quotes disabled.\n",
                         1 + reader->_internal->rows + reader->_internal->inlineBreaks);
                 break;
         default:
@@ -172,7 +189,7 @@ struct csv_record* csv_parse(struct csv_reader* reader, char* line)
 {
         uint fieldIndex = 0;
         struct csv_record* record = reader->_internal->_record;
-        if (!reader->_internal->fieldsAllocated && reader->_internal->buffer[0])
+        if (!reader->_internal->fieldsAllocated && !reader->_internal->delimLen)
                 csv_determine_delimiter(reader, line);
 
         while(line[0] != '\0') {
@@ -198,9 +215,10 @@ struct csv_record* csv_parse(struct csv_reader* reader, char* line)
                 }
 
                 if (!record->fields[fieldIndex-1].begin) {
+                        /** lowerstandard will exit outside of failsafe mode **/
                         csv_lowerstandard(reader);
-                        record->size = CSV_ERROR_QUOTES;
-                        return NULL;
+                        record->size = CSV_RESET;
+                        return record;
                 }
         }
 
@@ -281,7 +299,7 @@ struct csv_field csv_parse_rfc4180(struct csv_reader* reader, char** begin)
 struct csv_field csv_parse_weak(struct csv_reader* reader, char** begin)
 {
         unsigned int delimI = 0;
-        unsigned int onQuote = 0;
+        unsigned int onQuote = FALSE;
         unsigned int i = 1;
 
         struct csv_field field = {NULL, 0};
@@ -295,7 +313,7 @@ struct csv_field csv_parse_weak(struct csv_reader* reader, char** begin)
                                 onQuote = ((*begin)[i] == '"');
                         }
                 }
-                if ((*begin)[i] == '\0' && onQuote) {
+                if ((*begin)[i] == '\0' && !onQuote) {
                         int newLineLen = strlen(reader->inlineBreak);
                         if (newLineLen + reader->_internal->recordLen >= reader->_internal->bufferSize)
                                 csv_increasebuffer(reader);
@@ -340,6 +358,12 @@ struct csv_field csv_parse_none(struct csv_reader* reader, char** begin)
 
 void csv_determine_delimiter(struct csv_reader* reader, const char* header)
 {
+        uint delimLen = strlen(reader->delimiter);
+        if (delimLen) {
+                reader->_internal->delimLen = delimLen;
+                return;
+        }
+
         const char* delims = ",|\t";
         int i = 0;
         int sel = 0;
@@ -372,11 +396,9 @@ void csv_reader_open(struct csv_reader* reader, const char* fileName)
         //csv_init(reader);
 
         if (fileName) {
-                reader->failsafeMode = TRUE;
                 reader->_internal->file = fopen(fileName, "r");
                 EXIT_IF(!reader->_internal->file, fileName);
         } else {
-                //reader->_internal->failsafeMode = FALSE;
                 reader->_internal->file = stdin;
         }
 }
@@ -388,7 +410,7 @@ struct csv_reader* csv_new_reader()
         MALLOC(reader, sizeof(*reader));
         *reader = (struct csv_reader) {
                 NULL            /* internal */
-                ,","            /* delimiter */
+                ,""             /* delimiter */
                 ,"\n"           /* inlineBreak */
                 ,QUOTE_RFC4180  /* quotes */
                 ,0              /* Normal */
@@ -402,7 +424,7 @@ struct csv_reader* csv_new_reader()
                 ,NULL              /* buffer */
                 ,""                /* appendBuffer */
                 ,0                 /* fieldsAllocated; */
-                ,1                 /* delimLen */
+                ,0                 /* delimLen */
                 ,CSV_BUFFER_FACTOR /* bufferSize */
                 ,0                 /* recordLen */
                 ,0                 /* rows */
@@ -445,6 +467,7 @@ void csv_growrecord(struct csv_reader* reader)
 void csv_destroy_reader(struct csv_reader* reader)
 {
         FREE(reader->_internal->buffer);
+        FREE(reader->_internal->_record);
         FREE(reader->_internal);
         FREE(reader);
 }

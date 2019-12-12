@@ -35,12 +35,14 @@
 /**
  * realloc wrapper that does error checking
  */
-#define REALLOC(dest, size) {           \
-        dest = realloc(dest, size);     \
-        if (!dest) {                    \
-                perror("realloc");      \
-                cleanexit();            \
-        }                               \
+#define REALLOC(dest, size) {                   \
+        void* new_dest_ = realloc(dest, size);  \
+        if (!dest) {                            \
+                perror("realloc");              \
+                cleanexit();                    \
+        }                                       \
+        dest = new_dest_;                       \
+        new_dest_ = NULL;                       \
 }
 
 /**
