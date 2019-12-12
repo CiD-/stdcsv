@@ -166,7 +166,7 @@ struct csv_field csv_parse_rfc4180(struct csv_reader* reader, char** begin)
                         if ( (onQuote = ((*begin)[i] == '"') ) )
                                 qualified = !qualified;
                 }
-                if ((*begin)[i] == '\0' && !onQuote) {
+                if ((*begin)[i] == '\0' && onQuote) {
                         int newLineLen = strlen(reader->inlineBreak);
                         if (newLineLen + reader->_internal->recordLen >= reader->_internal->bufferSize)
                                 csv_increasebuffer(reader);
@@ -216,7 +216,7 @@ struct csv_field csv_parse_weak(struct csv_reader* reader, char** begin)
                                 onQuote = ((*begin)[i] == '"');
                         }
                 }
-                if ((*begin)[i] == '\0' && !onQuote) {
+                if ((*begin)[i] == '\0' && onQuote) {
                         int newLineLen = strlen(reader->inlineBreak);
                         if (newLineLen + reader->_internal->recordLen >= reader->_internal->bufferSize)
                                 csv_increasebuffer(reader);
@@ -290,7 +290,7 @@ void csv_determine_delimiter(struct csv_reader* reader, const char* header)
                         maxCount = count;
                 }
         }
-        //reader->_internal->delim = malloc(2);
+
         reader->delimiter[0] = delims[sel];
         reader->delimiter[1] = '\0';
         reader->_internal->delimLen = 1;
@@ -332,7 +332,7 @@ struct csv_record* csv_parse(struct csv_reader* reader, char* line)
 {
         uint fieldIndex = 0;
         struct csv_record* record = reader->_internal->_record;
-        if (!*reader->delimiter && !reader->_internal->fieldsAllocated)
+        if (!reader->_internal->fieldsAllocated && reader->_internal->buffer[0])
                 csv_determine_delimiter(reader, line);
 
         while(line[0] != '\0') {
@@ -412,20 +412,21 @@ struct csv_reader* csv_new_reader()
 
         MALLOC(reader->_internal, sizeof(*reader->_internal));
         *reader->_internal = (struct csv_read_internal) {
-                NULL    /* internal record */
-                ,stdin  /* file */
-                ,NULL   /* buffer */
-                ,""     /* appendBuffer */
-                ,0      /* fieldsAllocated; */
-                ,1      /* delimLen */
-                ,0      /* bufferSize */
-                ,0      /* recordLen */
-                ,0      /* rows */
-                ,0      /* inlineBreaks */
-                ,0      /* normalOrg */
+                NULL               /* internal record */
+                ,stdin             /* file */
+                ,NULL              /* buffer */
+                ,""                /* appendBuffer */
+                ,0                 /* fieldsAllocated; */
+                ,1                 /* delimLen */
+                ,CSV_BUFFER_FACTOR /* bufferSize */
+                ,0                 /* recordLen */
+                ,0                 /* rows */
+                ,0                 /* inlineBreaks */
+                ,0                 /* normalOrg */
         };
 
         MALLOC(reader->_internal->buffer, CSV_BUFFER_FACTOR);
+        MALLOC(reader->_internal->_record, sizeof(struct csv_record));
 
         if (!_signalsReady) {
                 /** Attach signal handlers **/
@@ -440,7 +441,7 @@ struct csv_reader* csv_new_reader()
                 _signalsReady = TRUE;
         }
 
-        csv_growrecord(reader);
+        //csv_growrecord(reader);
 
         return reader;
 }

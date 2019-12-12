@@ -113,7 +113,7 @@ void csv_write_record(struct csv_writer* writer, struct csv_record* rec)
 
 void csv_writer_close(struct csv_writer* writer)
 {
-        if (writer->_internal->file == stdin)
+        if (writer->_internal->file == stdout)
                 return;
 
         EXIT_IF(fclose(writer->_internal->file) == EOF, writer->_internal->tempname);
