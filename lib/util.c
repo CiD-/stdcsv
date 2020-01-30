@@ -27,7 +27,7 @@ void cleanoutputfile()
 void set_tempinputfile(char *s)
 {
         if (s)
-                strncpy(_tempInputFile, s, PATH_MAX);
+                strncpy(_tempInputFile, s, PATH_MAX - 1);
         else
                 *_tempInputFile = '\0';
 }
@@ -35,7 +35,7 @@ void set_tempinputfile(char *s)
 void set_tempoutputfile(char *s)
 {
         if (s)
-                strncpy(_tempOutputFile, s, PATH_MAX);
+                strncpy(_tempOutputFile, s, PATH_MAX - 1);
         else
                 *_tempOutputFile = '\0';
 }
