@@ -53,7 +53,6 @@ void csv_write_record(struct csv_writer* writer, struct csv_record* rec)
 
                 quoteCurrentField = (writer->quotes == QUOTE_ALL);
                 writeIndex = 0;
-                /* TODO - up front size check. */
                 for (j = 0; j < rec->fields[i].length; ++j) {
                         c = rec->fields[i].begin[j];
                         writer->_internal->buffer[writeIndex++] = c;
@@ -151,7 +150,7 @@ struct csv_writer* csv_new_writer()
         MALLOC(writer->_internal->buffer, CSV_BUFFER_FACTOR);
 
         /* Open a temp FILE* for writer->_internal->file.  This will
-         * be used for output in case we do a reset. 
+         * be used for output in case we do a reset.
          */
         if (!strcmp(csv_tempdir, "")) {
                 char pwd[PATH_MAX];
