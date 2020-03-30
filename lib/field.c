@@ -1,3 +1,4 @@
+#include "util.h"
 #include "csv.h"
 
 //const struct csv_record blank_record = {NULL, 0, 0};

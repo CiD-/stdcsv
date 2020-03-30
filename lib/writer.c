@@ -1,3 +1,4 @@
+#include "util.h"
 #include "csv.h"
 
 static char csv_tempdir[PATH_MAX-10] = "";
@@ -122,7 +123,7 @@ void csv_writer_close(struct csv_writer* writer)
         }
 }
 
-struct csv_writer* csv_new_writer()
+struct csv_writer* csv_writer_new()
 {
         struct csv_writer* writer = NULL;
 
@@ -184,7 +185,7 @@ void csv_writer_open(struct csv_writer* writer, const char* filename)
         STRNCPY(writer->_internal->filename, filename, PATH_MAX);
 }
 
-void csv_destroy_writer(struct csv_writer* writer)
+void csv_writer_free(struct csv_writer* writer)
 {
         FREE(writer->_internal->buffer);
         FREE(writer->_internal);

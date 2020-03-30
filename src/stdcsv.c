@@ -52,10 +52,10 @@ void parseargs(char c, struct csv_reader* reader, struct csv_writer* writer)
 {
         switch (c) {
         case 'c':
-                fputs("Not yet implemented", stderr);
+                fputs("Not yet implemented\n", stderr);
                 exit(EXIT_FAILURE);
         case 'C':
-                fputs("Not yet implemented", stderr);
+                fputs("Not yet implemented\n", stderr);
                 exit(EXIT_FAILURE);
         case 'f':
                 reader->failsafeMode = TRUE;
@@ -89,8 +89,8 @@ void parseargs(char c, struct csv_reader* reader, struct csv_writer* writer)
                         writer->quotes = QUOTE_RFC4180;
                 else {
                         fprintf(stderr
-                                ,"Invalid quote option: %s"
-                                 "\nOptions: NONE, WEAK, RFC4180, ALL"
+                                ,"Invalid quote option: %s\n"
+                                 "Options: NONE, WEAK, RFC4180, ALL\n"
                                 , optarg);
                         exit(EXIT_FAILURE);
                 }
@@ -106,8 +106,8 @@ void parseargs(char c, struct csv_reader* reader, struct csv_writer* writer)
                         reader->quotes = QUOTE_RFC4180;
                 else {
                         fprintf(stderr
-                                ,"Invalid quote option: %s"
-                                 "\nOptions: NONE, WEAK, RFC4180, ALL"
+                                ,"Invalid quote option: %s\n"
+                                 "Options: NONE, WEAK, RFC4180, ALL\n"
                                 , optarg);
                         exit(EXIT_FAILURE);
                 }
@@ -170,8 +170,8 @@ int main (int argc, char **argv)
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        struct csv_reader* reader = csv_new_reader();
-        struct csv_writer* writer = csv_new_writer();
+        struct csv_reader* reader = csv_reader_new();
+        struct csv_writer* writer = csv_writer_new();
         struct csv_record* record = NULL;
 
         while ( (c = getopt_long (argc, argv, "cCfhMniqQrWd:D:N:o:R:",
@@ -179,7 +179,7 @@ int main (int argc, char **argv)
                 parseargs(c, reader, writer);
 
         do {
-                /** If no files were provided, we read stdin **/
+                /** If a file was provided, open it for reading **/
                 if (optind != argc)
                         csv_reader_open(reader, argv[optind]);
 
@@ -194,8 +194,8 @@ int main (int argc, char **argv)
 
         } while (++optind < argc);
 
-        csv_destroy_reader(reader);
-        csv_destroy_writer(writer);
+        csv_reader_free(reader);
+        csv_writer_free(writer);
 
         return 0;
 }

@@ -1,5 +1,5 @@
-#ifndef CSV_RW
-#define CSV_RW
+#ifndef CSV_H
+#define CSV_H
 
 #ifndef TMPDIR
 #define TMPDIR  /tmp/
@@ -28,17 +28,11 @@
 #include <unistd.h>
 #include <limits.h>
 #include <signal.h>
-#include "util.h"
+#include <errno.h>
 
-/** Incomplete definition in main **/
-/*
-#define csv_destroy(csv_struct)                 \
-{                                               \
-        FREE(csv_struct->_internal->buffer);    \
-        FREE(csv_struct->_internal);            \
-        FREE(csv_struct);                       \
-}
-*/
+/**
+ * CSV Structures
+ */
 
 /* Structure containing an individual field */
 struct csv_field {
@@ -75,7 +69,9 @@ struct csv_writer {
 
 extern const struct csv_record blank_record;
 
-/** csv_field **/
+/**
+ * CSV Field
+ */
 
 /**
  * Return char* to end of field
@@ -86,7 +82,7 @@ const char* csv_get_end(struct csv_field* s);
  * Provide dynamically allocated char*
  * copy of the field
  */
-char* csv_newstring(struct csv_field* s);
+char* csv_string_new(struct csv_field* s);
 
 /**
  * Assigns buffer to a copy of the data within
@@ -95,19 +91,28 @@ char* csv_newstring(struct csv_field* s);
  */
 int csv_get_string(struct csv_field* s, char* buffer);
 
-/**
- * Initializes and returns a dynamic array of
- * pointers to struct csv_field
- */
-//struct csv_field** csv_init();
 
 
-/** csv_reader **/
 
 /**
- * Methods
+ * CSV Reader
  */
 
+/**
+ * Buffers for reading and appending are allocated here.
+ */
+struct csv_reader* csv_reader_new();
+
+/**
+ * Relese allocated heap resources
+ */
+void csv_reader_free(struct csv_reader*);
+
+/**
+ * Open a csv file for reading.  This file will close itself
+ * when reading has compeleted.
+ */
+void csv_reader_open(struct csv_reader*, const char* fileName);
 
 /**
  * csv_get_record takes an array of pointers to csv_field's.
@@ -125,49 +130,32 @@ struct csv_record* csv_get_record(struct csv_reader*);
 /**
  *
  */
-void csv_reader_open(struct csv_reader*, const char* fileName);
-
-/**
- * Buffers for reading and appending are allocated here.
- */
-struct csv_reader* csv_new_reader();
-
-/**
- * Free all heap memory.
- */
-//void csv_destroy(struct csv_reader*);
-
-/**
- *
- */
 struct csv_record* csv_parse(struct csv_reader*, char* line);
 
 
-/** csv_writer **/
-
-/**
- *
- */
-void csv_writer_open(struct csv_writer*, const char* fileName);
 
 
 /**
- * csvw_init opens a temp file for writing if input is from a file.
- * The location of the temp file is determined by available space on
- * the current partition. If that amount of space is less than
- * MIN_SPACE_AVAILABLE, then we use the TMPDIR (defined during
- * compilation). If TMPDIR is not defined during compilation, use /tmp.
+ * CSV Writer
  */
-struct csv_writer* csv_new_writer();
+
+/**
+ * Allocate resources for a writer
+ */
+struct csv_writer* csv_writer_new();
 
 /**
  * Relese allocated heap resources
  */
-void csv_destroy_reader(struct csv_reader*);
-void csv_destroy_writer(struct csv_writer*);
+void csv_writer_free(struct csv_writer*);
 
 /**
- * Dump temp file to destination file/stdout
+ * Open a file for writing csv conents
+ */
+void csv_writer_open(struct csv_writer*, const char* fileName);
+
+/**
+ *
  */
 void csv_writer_close(struct csv_writer*);
 

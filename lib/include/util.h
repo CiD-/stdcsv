@@ -183,7 +183,7 @@ char* getnoext(const char* filename);
  * The returned char* will be allocated on the heap
  * and must be free'd!
  */
-char *getext(char* filename);
+char* getext(char* filename);
 
 
 #endif

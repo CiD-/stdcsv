@@ -1,3 +1,4 @@
+#include "util.h"
 #include "csv.h"
 
 /* Signal Handlers */
@@ -164,8 +165,6 @@ void csv_appendlines(struct csv_reader* reader)
 
 struct csv_record* csv_get_record(struct csv_reader* reader)
 {
-        //uint fieldIndex = 0;
-
         csv_getline(reader);
 
         /* Can be removed if we get rid of CSV_MAX_RECORD_SIZE */
@@ -393,8 +392,6 @@ void csv_getline(struct csv_reader* reader)
 
 void csv_reader_open(struct csv_reader* reader, const char* fileName)
 {
-        //csv_init(reader);
-
         if (fileName) {
                 reader->_internal->file = fopen(fileName, "r");
                 EXIT_IF(!reader->_internal->file, fileName);
@@ -403,7 +400,7 @@ void csv_reader_open(struct csv_reader* reader, const char* fileName)
         }
 }
 
-struct csv_reader* csv_new_reader()
+struct csv_reader* csv_reader_new()
 {
         struct csv_reader* reader = NULL;
 
@@ -464,7 +461,7 @@ void csv_growrecord(struct csv_reader* reader)
         }
 }
 
-void csv_destroy_reader(struct csv_reader* reader)
+void csv_reader_free(struct csv_reader* reader)
 {
         FREE(reader->_internal->buffer);
         FREE(reader->_internal->_record);
