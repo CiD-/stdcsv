@@ -2,10 +2,11 @@ AC_INIT([stdcsv], [1.0])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
+AM_CFLAGS="-g -O0 -fsanitize=address -Wall"
 
 # Check
-PKG_CHECK_MODULES([CHECK], [check >= 0.10.0])
-AM_PATH_CHECK
+PKG_CHECK_MODULES([CHECK], [check >= 0.12.0])
+#AM_PATH_CHECK
 
 AM_PROG_AR
 LT_INIT
