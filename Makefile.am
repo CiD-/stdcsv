@@ -1,4 +1,3 @@
-#SUBDIRS = lib src tests
-SUBDIRS = lib tests
+SUBDIRS = lib src tests
 
 ACLOCAL_AMFLAGS = -I m4

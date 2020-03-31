@@ -36,7 +36,7 @@ int _safegetline(FILE *fp, char* buffer, size_t* buflen, size_t* off)
 int sappline(FILE *f, char **buf, size_t* buflen, size_t* len, size_t off)
 {
         size_t offset = off;
-        size_t ret = 0;
+        int ret = 0;
         do {
                 if(offset >= *buflen)
                         increase_buffer(buf, buflen);

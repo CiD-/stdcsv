@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "/data/user/jason/dev/refactor/lib/safegetline.h"
+#include "safegetline.h"
 
 int main()
 {
@@ -8,15 +8,15 @@ int main()
         size_t buflen = 0;
         size_t linelen = 0;
         int ret = sgetline(_file, &buf, &buflen, &linelen);
-        printf("%s = aaa,bbb,ccc\n", buf);
+        printf("%s = 123,456,789\n", buf);
         printf("%d = %d\n",ret, 0);
-        printf("%lu = %lu\n", linelen, 11);
-        printf("%lu = %lu\n", buflen, BUFFER_FACTOR);
+        printf("%lu = %u\n", linelen, 11);
+        printf("%lu = %u\n", buflen, BUFFER_FACTOR);
 
         ret = sgetline(_file, &buf, &buflen, &linelen);
         printf("%d = %d\n", ret, 0);
-        printf("%lu = %lu\n", linelen, 0);
-        printf("%lu = %lu\n", buflen, BUFFER_FACTOR);
+        printf("%lu = %u\n", linelen, 0);
+        printf("%lu = %u\n", buflen, BUFFER_FACTOR);
 
         ret = sgetline(_file, &buf, &buflen, &linelen);
         printf("%d = %d\n", ret, EOF);
