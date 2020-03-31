@@ -21,6 +21,8 @@ int main()
         ret = sgetline(_file, &buf, &buflen, &linelen);
         printf("%d = %d\n", ret, EOF);
 
+        printf("errno: %d\n", errno);
+
         free(buf);
         fclose(_file);
 }
