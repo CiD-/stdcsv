@@ -14,7 +14,7 @@
  *      - -2 if buflen is reached before new line is found.
  *      - EOF if Failed read
  */
-int sappline(FILE *f, char** buf, size_t* buflen, size_t* len, size_t off);
+int sappline(FILE *f, char** buf, size_t* buflen, size_t* len);
 int sgetline(FILE*, char** buf, size_t* buflen, size_t* linelen);
 
 #endif

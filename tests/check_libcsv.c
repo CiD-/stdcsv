@@ -7,6 +7,10 @@ size_t buflen = 0;
 size_t linelen = 0;
 FILE* _file = NULL;
 
+/**
+ * safegetline Testing
+ */
+
 void sgl_setup(void)
 {
         buf = NULL;
@@ -18,6 +22,7 @@ void sgl_setup(void)
 void sgl_teardown(void)
 {
         free(buf);
+        buf = NULL;
         fclose(_file);
 }
 
@@ -29,6 +34,13 @@ void test_getline1()
         ck_assert_int_eq(ret, 0);
         ck_assert_uint_eq(linelen, 11);
         ck_assert_uint_eq(buflen, BUFFER_FACTOR);
+
+        ret = sgetline(_file, &buf, &buflen, &linelen);
+        ck_assert_str_eq(buf, "012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345");
+        ck_assert_uint_eq(linelen, strlen("012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345"));
+        ck_assert_int_eq(ret, 0);
+        printf("BUFFER SIZE: %lu\n", buflen);
+        //ck_assert_uint_eq(buflen, BUFFER_FACTOR);
 
         ret = sgetline(_file, &buf, &buflen, &linelen);
         ck_assert_int_eq(ret, EOF);
@@ -97,6 +109,38 @@ START_TEST(test_safegetline_long)
 }
 END_TEST
 
+
+
+
+/**
+ * RFC-4180 Testing
+ */
+
+struct csv_reader* reader = NULL;
+struct csv_record* record = NULL;
+
+void parse_setup(void)
+{
+        reader = csv_reader_new();
+        record = NULL;
+}
+
+void parse_teardown(void)
+{
+        csv_reader_free(reader);
+}
+
+
+START_TEST(test_parse_rfc)
+{
+        record = csv_parse(reader, "123,456,789");
+        ck_assert_int_eq(record->size, 3);
+        ck_assert_str_eq(record->fields[0], "123");
+        ck_assert_str_eq(record->fields[1], "456");
+        ck_assert_str_eq(record->fields[2], "789");
+}
+
+
 Suite* csv_reader_suite(void)
 {
         Suite* s;
@@ -110,6 +154,11 @@ Suite* csv_reader_suite(void)
         tcase_add_test(tc_sgl, test_safegetline_notrail);
         tcase_add_test(tc_sgl, test_safegetline_long);
         suite_add_tcase(s, tc_sgl);
+
+        TCase* tc_parse_rfc = tcase_create("rfc4180");
+        tcase_add_checked_fixture(tc_parse_rfc, parse_setup, parse_teardown);
+        tcase_add_test(tc_parse_rfc, test_parse_rfc);
+        suite_add_tcase(s, tc_parse_rfc);
 
         return s;
 }

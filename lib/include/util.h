@@ -14,6 +14,7 @@
 
 /** **/
 void increase_buffer(char**, size_t*);
+void increase_buffer_to(char**, size_t*, size_t);
 
 
 /**

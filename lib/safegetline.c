@@ -32,7 +32,7 @@ int _safegetline(FILE *fp, char* buffer, size_t* buflen, size_t* off)
         *off = dst - buffer;
 
         /* End of Buffer before End of Line */
-        if (dst == end && c != '\n')
+        if (dst == end)
                 return EOF - 1;
 
         if (c == EOF && dst == buffer) {
@@ -46,8 +46,7 @@ int _safegetline(FILE *fp, char* buffer, size_t* buflen, size_t* off)
         return 0;
 }
 
-
-int sappline(FILE *f, char **buf, size_t* buflen, size_t* len, size_t off)
+int _getline_runner(FILE* f, char** buf, size_t* buflen, size_t* len, size_t off)
 {
         size_t offset = off;
         int ret = 0;
@@ -63,7 +62,12 @@ int sappline(FILE *f, char **buf, size_t* buflen, size_t* len, size_t off)
         return ret;
 }
 
-int sgetline(FILE *fp, char **buf, size_t* buflen, size_t* linelen)
+int sappline(FILE *f, char **buf, size_t* buflen, size_t* len)
 {
-        return sappline(fp, buf, buflen, linelen, 0);
+        return _getline_runner(f, buf, buflen, len, strlen(*buf));
+}
+
+int sgetline(FILE *f, char **buf, size_t* buflen, size_t* len)
+{
+        return _getline_runner(f, buf, buflen, len, 0);
 }
