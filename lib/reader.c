@@ -172,8 +172,6 @@ struct csv_record* csv_parse(struct csv_reader* this, const char* line)
         uint fieldIndex = 0;
         int ret = 0;
         while(line[0] != '\0') {
-                if (fieldIndex)
-                        line += this->_in->delimLen;
                 if (++(fieldIndex) > this->_in->fieldsAllocated)
                         csv_growrecord(this);
 
@@ -285,7 +283,7 @@ int csv_parse_rfc4180(struct csv_reader* this, const char** line)
                         continue;
                 }
 
-                if (!**line)
+                if (**line)
                         this->_in->bufIdx -= this->_in->delimLen;
                 this->_in->buffer[this->_in->bufIdx++] = '\0';
 
@@ -318,7 +316,7 @@ int csv_parse_weak(struct csv_reader* this, const char** line)
                         continue;
                 }
 
-                if (!**line)
+                if (**line)
                         this->_in->bufIdx -= this->_in->delimLen - 1;
                 this->_in->buffer[this->_in->bufIdx++] = '\0';
 
@@ -341,7 +339,7 @@ int csv_parse_none(struct csv_reader* this, const char** line)
                 this->_in->buffer[this->_in->bufIdx++] = **line;
         }
 
-        if (!**line)
+        if (**line)
                 this->_in->bufIdx -= this->_in->delimLen;
         this->_in->buffer[this->_in->bufIdx++] = '\0';
 
@@ -357,7 +355,7 @@ void csv_determine_delimiter(struct csv_reader* this, const char* header)
         }
 
         const char* delims = ",|\t;:";
-        int i = 0;
+        uint i = 0;
         int sel = 0;
         int count = 0;
         int maxCount = 0;

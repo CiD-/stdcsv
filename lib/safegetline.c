@@ -26,7 +26,7 @@ int _safegetline(FILE *fp, char* buffer, size_t* buflen, size_t* off)
         }
 
         if (endfound)
-                *dst--; /* YES IT FUCKING IS */
+                dst--;
 
         *dst = '\0';
         *off = dst - buffer;

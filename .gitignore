@@ -1,4 +1,5 @@
 stdcsv
+.gdb_history
 
 # Check files
 check_libcsv
