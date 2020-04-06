@@ -47,8 +47,12 @@ static const char* helpString =
 "\n        More info: https://www.ietf.org/rfc/rfc4180.txt\n"
 ;
 
+typedef struct csv_reader csv_reader;
+typedef struct csv_writer csv_writer;
+typedef struct csv_record csv_record;
 
-void parseargs(char c, struct csv_reader* reader, struct csv_writer* writer)
+
+void parseargs(char c, csv_reader* reader, csv_writer* writer)
 {
         switch (c) {
         case 'c':
@@ -170,21 +174,23 @@ int main (int argc, char **argv)
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        struct csv_reader* reader = csv_reader_new();
-        struct csv_writer* writer = csv_writer_new();
-        struct csv_record* record = NULL;
+        csv_reader* reader = csv_reader_new();
+        csv_writer* writer = csv_writer_new();
+        csv_record* record = NULL;
 
         while ( (c = getopt_long (argc, argv, "cCfhMniqQrWd:D:N:o:R:",
                                   long_options, &option_index)) != -1)
                 parseargs(c, reader, writer);
+
+        int ret = 0;
 
         do {
                 /** If a file was provided, open it for reading **/
                 if (optind != argc)
                         csv_reader_open(reader, argv[optind]);
 
-                while ( (record = csv_get_record(reader)) ) {
-                        if (record->size == CSV_RESET)
+                while ( (ret = csv_get_record(reader, record)) ) {
+                        if (ret == CSV_RESET)
                                 csv_writer_reset(writer);
                         else
                                 csv_write_record(writer, record);

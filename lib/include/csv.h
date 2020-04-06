@@ -8,8 +8,7 @@
 #define STRING_VALUE(arg) #arg
 #define TMPDIR_STR STRING_VALUE(TMPDIR)
 
-#define MIN_SPACE_AVAILABLE     5000000000
-
+#define CSV_GOOD                0
 #define CSV_RESET               -100
 #define CSV_NORMAL_OPEN         -2
 #define CSV_BUFFER_FACTOR       128
@@ -79,10 +78,14 @@ struct csv_reader* csv_reader_new();
  */
 void csv_reader_free(struct csv_reader*);
 
+/** Accessors **/
+uint csv_reader_row_count(struct csv_reader*);
+uint csv_reader_inline_breaks(struct csv_reader*);
+
 /**
- * 
+ *
  */
-struct csv_record* csv_get_record(struct csv_reader*);
+int csv_get_record(struct csv_reader*, struct csv_record**);
 
 /**
  * Reset statistics. If their is an associated file

@@ -33,14 +33,15 @@ struct csv_read_internal {
 };
 
 
+
 /**
  * Internal prototypes
  */
 
 /**
  * csv_determine_delimiter chooses between comma, pipe, semi-colon,
- * colon or tab depending on which  one is found most. If none of 
- * these delimiters are found, use comma. If this->delimiter was set 
+ * colon or tab depending on which  one is found most. If none of
+ * these delimiters are found, use comma. If this->delimiter was set
  * externally, simply update this->_in->delimLen and return.
  */
 void csv_determine_delimiter(struct csv_reader*, const char* header);
@@ -52,17 +53,101 @@ void csv_determine_delimiter(struct csv_reader*, const char* header);
 void csv_growrecord(struct csv_reader*);
 
 /**
+ * csv_append_line is used to retrieve another line
+ * of input for an in-line break.
+ */
+int csv_append_line(struct csv_reader* this, uint nlCount);
+
+/**
+ * Simple CSV parsing. Disregard all quotes.
  */
 int csv_parse_none(struct csv_reader*, const char** line);
 
 /**
+ * Parse line respecting quotes. Quotes within
+ * the field are not expected to be duplicated.
  */
 int csv_parse_weak(struct csv_reader*, const char** line);
 
 /**
+ * Parse line according to RFC-4180 guidelines.
+ * More info: https://tools.ietf.org/html/rfc4180
  */
 int csv_parse_rfc4180(struct csv_reader*, const char** line);
 
+
+struct csv_reader* csv_reader_new()
+{
+        struct csv_reader* reader = NULL;
+
+        MALLOC(reader, sizeof(*reader));
+        *reader = (struct csv_reader) {
+                NULL            /* internal */
+                ,""             /* delimiter */
+                ,"\n"           /* inlineBreak */
+                ,QUOTE_RFC4180  /* quotes */
+                ,0              /* Normal */
+                ,FALSE          /* failsafeMode */
+        };
+
+        MALLOC(reader->_in, sizeof(*reader->_in));
+        *reader->_in = (struct csv_read_internal) {
+                NULL   /* internal record */
+                ,stdin /* file */
+                ,NULL  /* rawBuffer */
+                ,NULL  /* buffer */
+                ,0     /* bufIdx */
+                ,0     /* rawBufferSize */
+                ,0     /* bufferSize */
+                ,0     /* rawLength */
+                ,0     /* fieldsAllocated; */
+                ,0     /* delimLen */
+                ,0     /* rows */
+                ,0     /* inlineBreaks */
+                ,0     /* normalOrg */
+        };
+
+        increase_buffer(&reader->_in->buffer, &reader->_in->bufferSize);
+        MALLOC(reader->_in->_record, sizeof(struct csv_record));
+
+        if (!_signalsReady) {
+                /** Attach signal handlers **/
+                act.sa_mask = vg_shutup;
+                act.sa_flags = 0;
+                act.sa_handler = cleanexit;
+                sigaction(SIGINT, &act, NULL);
+                sigaction(SIGQUIT, &act, NULL);
+                sigaction(SIGTERM, &act, NULL);
+                sigaction(SIGHUP, &act, NULL);
+
+                _signalsReady = TRUE;
+        }
+
+        //csv_growrecord(reader);
+
+        return reader;
+}
+
+void csv_reader_free(struct csv_reader* this)
+{
+        FREE(this->_in->buffer);
+        FREE(this->_in->_record);
+        FREE(this->_in);
+        FREE(this);
+}
+
+/**
+ * Simple accessors
+ */
+uint csv_reader_row_count(struct csv_reader* this)
+{
+        return this->_in->rows;
+}
+
+uint csv_reader_inline_breaks(struct csv_reader* this)
+{
+        return this->_in->inlineBreaks;
+}
 
 void csv_growrecord(struct csv_reader* this)
 {
@@ -75,7 +160,7 @@ void csv_growrecord(struct csv_reader* this)
         }
 }
 
-struct csv_record* csv_get_record(struct csv_reader* this)
+int csv_get_record(struct csv_reader* this, struct csv_record** rec)
 {
         int ret = sgetline(this->_in->file,
                            &this->_in->rawBuffer,
@@ -86,10 +171,16 @@ struct csv_record* csv_get_record(struct csv_reader* this)
                 this->_in->fieldsAllocated = 0;
                 this->normal = this->_in->normalOrg;
                 csv_reader_close(this);
-                return NULL;
+                *rec = NULL;
+                return ret;
         }
 
-        return csv_parse(this, this->_in->rawBuffer);
+        *rec = csv_parse(this, this->_in->rawBuffer);
+
+        if ((*rec)->size < 0)
+                return (*rec)->size;
+
+        return CSV_GOOD;
 }
 
 void csv_lowerstandard(struct csv_reader* this)
@@ -141,7 +232,7 @@ struct csv_record* csv_parse(struct csv_reader* this, const char* line)
 {
         struct csv_record* record = this->_in->_record;
 
-        if (!this->_in->fieldsAllocated && !this->_in->delimLen)
+        if (!this->_in->delimLen)
                 csv_determine_delimiter(this, line);
 
         if (strlen(line) >= this->_in->bufferSize) {
@@ -255,6 +346,9 @@ int csv_parse_rfc4180(struct csv_reader* this, const char** line)
 
                         if (!skip)
                                 this->_in->buffer[this->_in->bufIdx++] = **line;
+
+                        if (**line == '\n')
+                                ++this->_in->inlineBreaks;
                 }
                 /** In-line break found **/
                 if (**line == '\0' && qualified) {
@@ -292,11 +386,14 @@ int csv_parse_weak(struct csv_reader* this, const char** line)
                                 onQuote = (**line == '"');
                         }
                         this->_in->buffer[this->_in->bufIdx++] = **line;
+
+                        if (**line == '\n')
+                                ++this->_in->inlineBreaks;
                 }
                 if (**line == '\0' && !onQuote) {
-                        if (++nlCount > CSV_MAX_NEWLINES || 
+                        if (++nlCount > CSV_MAX_NEWLINES ||
                             csv_append_line(this, nlCount) == EOF) {
-                                return EOF;
+                                return CSV_RESET;
                         }
                         continue;
                 }
@@ -324,6 +421,9 @@ int csv_parse_none(struct csv_reader* this, const char** line)
                         delimIdx = (**line == this->delimiter[0]) ? 1 : 0;
 
                 this->_in->buffer[this->_in->bufIdx++] = **line;
+
+                if (**line == '\n')
+                        ++this->_in->inlineBreaks;
         }
 
         if (**line)
@@ -376,6 +476,8 @@ void csv_reader_close(struct csv_reader* this)
 void csv_reader_reset(struct csv_reader* this)
 {
         this->normal = this->_in->normalOrg;
+        this->delimiter[0] = '\0';
+        this->_in->delimLen = 0;
         this->_in->inlineBreaks = 0;
         this->_in->rows = 0;
         this->_in->buffer[0] = '\0';
@@ -384,64 +486,3 @@ void csv_reader_reset(struct csv_reader* this)
                 EXIT_IF(ret, "fseek");
         }
 }
-
-struct csv_reader* csv_reader_new()
-{
-        struct csv_reader* reader = NULL;
-
-        MALLOC(reader, sizeof(*reader));
-        *reader = (struct csv_reader) {
-                NULL            /* internal */
-                ,""             /* delimiter */
-                ,"\n"           /* inlineBreak */
-                ,QUOTE_RFC4180  /* quotes */
-                ,0              /* Normal */
-                ,FALSE          /* failsafeMode */
-        };
-
-        MALLOC(reader->_in, sizeof(*reader->_in));
-        *reader->_in = (struct csv_read_internal) {
-                NULL   /* internal record */
-                ,stdin /* file */
-                ,NULL  /* rawBuffer */
-                ,NULL  /* buffer */
-                ,0     /* bufIdx */
-                ,0     /* rawBufferSize */
-                ,0     /* bufferSize */
-                ,0     /* rawLength */
-                ,0     /* fieldsAllocated; */
-                ,0     /* delimLen */
-                ,0     /* rows */
-                ,0     /* inlineBreaks */
-                ,0     /* normalOrg */
-        };
-
-        increase_buffer(&reader->_in->buffer, &reader->_in->bufferSize);
-        MALLOC(reader->_in->_record, sizeof(struct csv_record));
-
-        if (!_signalsReady) {
-                /** Attach signal handlers **/
-                act.sa_mask = vg_shutup;
-                act.sa_flags = 0;
-                act.sa_handler = cleanexit;
-                sigaction(SIGINT, &act, NULL);
-                sigaction(SIGQUIT, &act, NULL);
-                sigaction(SIGTERM, &act, NULL);
-                sigaction(SIGHUP, &act, NULL);
-
-                _signalsReady = TRUE;
-        }
-
-        //csv_growrecord(reader);
-
-        return reader;
-}
-
-void csv_reader_free(struct csv_reader* this)
-{
-        FREE(this->_in->buffer);
-        FREE(this->_in->_record);
-        FREE(this->_in);
-        FREE(this);
-}
-
