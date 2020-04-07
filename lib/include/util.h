@@ -10,15 +10,24 @@
 
 #define TRUE  1
 #define FALSE 0
+#define BUFFER_FACTOR 128
+
+/** **/
+void increase_buffer(char**, size_t*);
+void increase_buffer_to(char**, size_t*, size_t);
+
 
 /**
  * Wrapper for checking errors.
  */
-#define EXIT_IF(condition, errormsg) {  \
-        if (condition) {                \
-                perror(errormsg);       \
-                cleanexit();            \
-        }                               \
+#define EXIT_IF(condition, errormsg) {      \
+        if (condition) {                    \
+                if (errno)                  \
+                    perror(errormsg);       \
+                else                        \
+                    fputs(errormsg, stderr);\
+                cleanexit();                \
+        }                                   \
 }
 
 /**
@@ -104,19 +113,6 @@ void set_tempinputfile(char* s);
  * need to be removed when cleanexit is called.
  */
 void set_tempoutputfile(char* s);
-
-/**
- * safegetline gets the next line from the provided
- * FILE* and sets up to a max of buflen characters to buffer.
- * This is a safer alternative to gnu getline in that it will
- * safely pull line endings from other operating systems.
- *
- * Returns:
- *      - The number of characters in the buffer
- *      - -2 if buflen is reached before new line is found.
- *      - EOF if Failed read
- */
-int safegetline(FILE *fp, char *buffer, size_t buflen);
 
 /**
  * This function is a wrapper for stringtolong below.

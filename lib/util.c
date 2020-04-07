@@ -4,6 +4,30 @@ static char _tempInputFile[PATH_MAX] = "\0";
 static char _tempOutputFile[PATH_MAX] = "\0";
 
 
+void increase_buffer(char** buf, size_t* buflen)
+{
+        *buflen += BUFFER_FACTOR;
+        if (*buflen == BUFFER_FACTOR){
+                MALLOC(*buf, *buflen);
+        } else {
+                REALLOC(*buf, *buflen);
+        }
+}
+
+void increase_buffer_to(char** buf, size_t* buflen, size_t target)
+{
+        target = BUFFER_FACTOR * (target / BUFFER_FACTOR + 1);
+        if (*buflen > target)
+                return;
+
+        *buflen = target;
+        if (*buflen == BUFFER_FACTOR){
+                MALLOC(*buf, *buflen);
+        } else {
+                REALLOC(*buf, *buflen);
+        }
+}
+
 
 void cleanexit()
 {
@@ -38,37 +62,6 @@ void set_tempoutputfile(char *s)
                 strncpy(_tempOutputFile, s, PATH_MAX - 1);
         else
                 *_tempOutputFile = '\0';
-}
-
-int safegetline(FILE *fp, char *buffer, size_t buflen)
-{
-        char *end = buffer + buflen - 1;
-        char *dst = buffer;
-        int c = 0;
-        int ret = 0;
-
-        while ((c = getc(fp)) != EOF  && c != '\n' && dst < end)
-        {
-                if (c == '\r') {
-                        c = getc(fp);
-                        if (c != '\n' && c != EOF)
-                                ungetc(c, fp);
-                        ret = dst - buffer + 1;
-                        break;
-                }
-                *dst++ = c;
-        }
-        *dst = '\0';
-
-        if (!ret) {
-                if (dst == end && c != '\n')
-                        return -2; /* End of buffer before end of line */
-                ret = dst - buffer;
-        }
-
-        if (c == EOF && dst == buffer)
-                return EOF;
-        return ret;
 }
 
 long stringtolong10(const char* s)
@@ -130,7 +123,7 @@ char* randstr(char* s, const int len)
 
         int i = 0;
 
-        for (; i < len && i < 100; ++i)
+        for (; i < len; ++i)
                 s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
 
         s[i] = '\0';
