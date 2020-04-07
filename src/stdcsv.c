@@ -188,7 +188,7 @@ int main (int argc, char **argv)
 
         do {
                 /** If a file was provided, open it for reading **/
-                if (optind != argc)
+                if (optind != argc && ret != CSV_RESET)
                         csv_reader_open(reader, argv[optind]);
 
                 while ((ret = csv_get_record(reader, &record)) == CSV_GOOD)
