@@ -66,6 +66,8 @@ int csv_parse_none(struct csv_reader*, const char** line);
 /**
  * Parse line respecting quotes. Quotes within
  * the field are not expected to be duplicated.
+ * Leading spaces will cause the field to not
+ * be treated as qualified.
  */
 int csv_parse_weak(struct csv_reader*, const char** line);
 
@@ -123,14 +125,14 @@ struct csv_reader* csv_reader_new()
                 _signalsReady = TRUE;
         }
 
-        //csv_growrecord(reader);
-
         return reader;
 }
 
 void csv_reader_free(struct csv_reader* this)
 {
         FREE(this->_in->buffer);
+        FREE(this->_in->rawBuffer);
+        FREE(this->_in->_record->fields);
         FREE(this->_in->_record);
         FREE(this->_in);
         FREE(this);
@@ -374,6 +376,7 @@ int csv_parse_weak(struct csv_reader* this, const char** line)
         uint delimIdx = 0;
         uint onQuote = FALSE;
         int nlCount = 0;
+        uint trailing = 0;
 
         ++(*line);
 
@@ -383,7 +386,13 @@ int csv_parse_weak(struct csv_reader* this, const char** line)
                                 ++delimIdx;
                         } else {
                                 delimIdx = 0;
-                                onQuote = (**line == '"');
+                                /* Handle trailing space after quote */
+                                if (onQuote && isspace(**line)) {
+                                        ++trailing;
+                                } else {
+                                        trailing = 0;
+                                        onQuote = (**line == '"');
+                                }
                         }
                         this->_in->buffer[this->_in->bufIdx++] = **line;
 
@@ -400,7 +409,7 @@ int csv_parse_weak(struct csv_reader* this, const char** line)
 
                 if (**line)
                         this->_in->bufIdx -= this->_in->delimLen;
-                --this->_in->bufIdx;
+                this->_in->bufIdx -= trailing + 1;
                 this->_in->buffer[this->_in->bufIdx++] = '\0';
 
                 break;

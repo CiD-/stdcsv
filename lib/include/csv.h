@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <string.h>
 #include <sys/statvfs.h>
 #include <unistd.h>
@@ -83,7 +84,7 @@ uint csv_reader_row_count(struct csv_reader*);
 uint csv_reader_inline_breaks(struct csv_reader*);
 
 /**
- *
+ * Main accessing function for reading data.
  */
 int csv_get_record(struct csv_reader*, struct csv_record**);
 
