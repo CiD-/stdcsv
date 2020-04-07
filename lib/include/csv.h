@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include <sys/statvfs.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <limits.h>
 #include <signal.h>
@@ -135,6 +135,12 @@ void csv_writer_free(struct csv_writer*);
  * Open a file for writing csv conents
  */
 void csv_writer_open(struct csv_writer*, const char* fileName);
+
+/**
+ * Open a temp FILE* for this->_in->file.  This will
+ * be used for output in case we do a reset.
+ */
+void csv_open_temp(struct csv_writer* this);
 
 /**
  *
