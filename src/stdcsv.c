@@ -24,8 +24,8 @@ static const char* helpString =
 "\n-N|--num-fields arg       Specify number of output fields (Implies -n)"
 "\n-o|--output-file arg      Specify an output file. Default is stdout."
 "\n                          Note: This implies concatenation"
-"\n-q|--out-quotes arg       Specify quoting rule set for output."
-"\n-Q|--in-quotes arg        Specify quoting rule set for input."
+"\n-Q|--out-quotes arg       Specify quoting rule set for output."
+"\n-q|--in-quotes arg        Specify quoting rule set for input."
 "\n                          Options: NONE, WEAK, RFC4180, ALL (details below)"
 "\n-r|--no-embedded-nl       Remove embedded new lines."
 "\n-R|--replace-newline arg  Specify a string to replace embedded new lines."
@@ -63,6 +63,7 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                 exit(EXIT_FAILURE);
         case 'f':
                 reader->failsafeMode = TRUE;
+                csv_open_temp(writer);
                 break;
         case 'h': /* help */
                 puts(helpString);
@@ -82,7 +83,7 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
         case 'i': /* in-place-edit */
                 //csvw_set_inplaceedit(1);
                 break;
-        case 'q': /* out-quotes */
+        case 'Q': /* out-quotes */
                 if(!strcasecmp(optarg, "ALL"))
                         writer->quotes = QUOTE_ALL;
                 else if (!strcasecmp(optarg, "WEAK"))
@@ -99,7 +100,7 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                         exit(EXIT_FAILURE);
                 }
                 break;
-        case 'Q': /* in-quotes */
+        case 'q': /* in-quotes */
                 if(!strcasecmp(optarg, "ALL"))
                         reader->quotes = QUOTE_ALL;
                 else if (!strcasecmp(optarg, "WEAK"))
@@ -139,6 +140,7 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                 STRNCPY(writer->lineEnding, "\r", 3);
                 break;
         case '?': /* Should never get here... */
+                exit(EXIT_FAILURE);
                 break;
         default:
                 abort();
@@ -158,8 +160,8 @@ int main (int argc, char **argv)
                 {"num-fields", required_argument, 0, 'N'},
                 {"failsafe", no_argument, 0, 'f'},
                 {"in-place-edit", no_argument, 0, 'i'},
-                {"out-quotes", required_argument, 0, 'q'},
-                {"in-quotes", required_argument, 0, 'Q'},
+                {"out-quotes", required_argument, 0, 'Q'},
+                {"in-quotes", required_argument, 0, 'q'},
                 {"out-delimiter", required_argument, 0, 'd'},
                 {"in-delimiter", required_argument, 0, 'D'},
                 {"no-embedded-nl", no_argument, 0, 'r'},
@@ -178,7 +180,7 @@ int main (int argc, char **argv)
         csv_writer* writer = csv_writer_new();
         csv_record* record = NULL;
 
-        while ( (c = getopt_long (argc, argv, "cCfhMniqQrWd:D:N:o:R:",
+        while ( (c = getopt_long (argc, argv, "cCfhMnirWd:D:N:o:Q:q:R:",
                                   long_options, &option_index)) != -1)
                 parseargs(c, reader, writer);
 
@@ -189,16 +191,17 @@ int main (int argc, char **argv)
                 if (optind != argc)
                         csv_reader_open(reader, argv[optind]);
 
-                while ( (ret = csv_get_record(reader, &record)) == CSV_GOOD ) {
-                        if (ret == CSV_RESET)
-                                csv_writer_reset(writer);
-                        else
-                                csv_write_record(writer, record);
+                while ((ret = csv_get_record(reader, &record)) == CSV_GOOD)
+                        csv_write_record(writer, record);
+
+                if (ret == CSV_RESET) {
+                        csv_writer_reset(writer);
+                } else {
+                        csv_writer_close(writer);
+                        ++optind;
                 }
 
-                csv_writer_close(writer);
-
-        } while (++optind < argc);
+        } while (optind < argc || ret == CSV_RESET);
 
         csv_reader_free(reader);
         csv_writer_free(writer);

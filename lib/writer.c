@@ -18,16 +18,6 @@ struct csv_write_internal {
 };
 
 
-/**
- * Internal Prototypes
- */
-
-/**
- * Open a temp FILE* for this->_in->file.  This will
- * be used for output in case we do a reset.
- */
-void csv_open_temp(struct csv_writer* this);
-
 struct csv_writer* csv_writer_new()
 {
         struct csv_writer* this = NULL;
@@ -112,14 +102,15 @@ void csv_write_record(struct csv_writer* this, struct csv_record* rec)
 void csv_writer_reset(struct csv_writer* this)
 {
         EXIT_IF(this->_in->file == stdin, "Cannot reset stdout\n");
-        
-        if (this->_in->file) {
-                EXIT_IF(fclose(this->_in->file) == EOF, this->_in->tempname);
-                this->_in->file = NULL;
-        }
 
+        if (!this->_in->file)
+                return;
+
+        EXIT_IF(fclose(this->_in->file) == EOF, this->_in->tempname);
+        //this->_in->file = NULL;
         this->_in->file = fopen(this->_in->tempname, "w");
         EXIT_IF(!this->_in->file, this->_in->tempname);
+
 }
 
 void csv_open_temp(struct csv_writer* this)
@@ -136,7 +127,8 @@ void csv_open_temp(struct csv_writer* this)
 void csv_writer_open(struct csv_writer* this, const char* filename)
 {
         STRNCPY(this->_in->filename, filename, PATH_MAX);
-        csv_open_temp(this);
+        if (!this->_in->file)
+                csv_open_temp(this);
 }
 
 void csv_writer_close(struct csv_writer* this)
@@ -150,6 +142,8 @@ void csv_writer_close(struct csv_writer* this)
         if (this->_in->filename[0] != '\0') {
                 int ret = rename(this->_in->tempname, this->_in->filename);
                 EXIT_IF(ret, this->_in->tempname);
+                ret = chmod(this->_in->filename, 0666);
+                EXIT_IF(ret, this->_in->filename);
         } else {
                 FILE* dumpFile = fopen(this->_in->tempname, "r");
                 EXIT_IF(!dumpFile, this->_in->tempname);
