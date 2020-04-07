@@ -189,7 +189,7 @@ int main (int argc, char **argv)
                 if (optind != argc)
                         csv_reader_open(reader, argv[optind]);
 
-                while ( (ret = csv_get_record(reader, record)) ) {
+                while ( (ret = csv_get_record(reader, &record)) == CSV_GOOD ) {
                         if (ret == CSV_RESET)
                                 csv_writer_reset(writer);
                         else

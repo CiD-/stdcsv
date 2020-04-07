@@ -117,39 +117,39 @@ struct csv_record* csv_parse(struct csv_reader*, const char* line);
 
 
 
-///**
-// * CSV Writer
-// */
-//
-///**
-// * Allocate resources for a writer
-// */
-//struct csv_writer* csv_writer_new();
-//
-///**
-// * Relese allocated heap resources
-// */
-//void csv_writer_free(struct csv_writer*);
-//
-///**
-// * Open a file for writing csv conents
-// */
-//void csv_writer_open(struct csv_writer*, const char* fileName);
-//
-///**
-// *
-// */
-//void csv_writer_close(struct csv_writer*);
-//
-///**
-// * Loop through array of struct csv_field, and print the line to csvw_file.
-// */
-//void csv_write_record(struct csv_writer*, struct csv_record*);
-//
-///**
-// *
-// */
-//void csv_writer_reset(struct csv_writer*);
+/**
+ * CSV Writer
+ */
+
+/**
+ * Allocate resources for a writer
+ */
+struct csv_writer* csv_writer_new();
+
+/**
+ * Relese allocated heap resources
+ */
+void csv_writer_free(struct csv_writer*);
+
+/**
+ * Open a file for writing csv conents
+ */
+void csv_writer_open(struct csv_writer*, const char* fileName);
+
+/**
+ *
+ */
+void csv_writer_reset(struct csv_writer*);
+
+/**
+ *
+ */
+void csv_writer_close(struct csv_writer*);
+
+/**
+ * Loop through array of struct csv_field, and print the line to csvw_file.
+ */
+void csv_write_record(struct csv_writer*, struct csv_record*);
 
 
 #endif

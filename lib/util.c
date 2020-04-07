@@ -123,7 +123,7 @@ char* randstr(char* s, const int len)
 
         int i = 0;
 
-        for (; i < len && i < 100; ++i)
+        for (; i < len; ++i)
                 s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
 
         s[i] = '\0';

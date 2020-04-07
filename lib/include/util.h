@@ -20,11 +20,14 @@ void increase_buffer_to(char**, size_t*, size_t);
 /**
  * Wrapper for checking errors.
  */
-#define EXIT_IF(condition, errormsg) {  \
-        if (condition) {                \
-                perror(errormsg);       \
-                cleanexit();            \
-        }                               \
+#define EXIT_IF(condition, errormsg) {      \
+        if (condition) {                    \
+                if (errno)                  \
+                    perror(errormsg);       \
+                else                        \
+                    fputs(errormsg, stderr);\
+                cleanexit();                \
+        }                                   \
 }
 
 /**
