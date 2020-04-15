@@ -5,12 +5,12 @@
  * Internal Structure
  */
 struct csv_write_internal {
-        //struct csv_record* _record;
+        FILE* file;
+        char* buffer;
+        struct charnode* tmp_node;
         char tempname[PATH_MAX];
         char filename[PATH_MAX];
         char filename_org[PATH_MAX];
-        FILE* file;
-        char* buffer;
 
         size_t bufferSize;
         uint delimLen;
@@ -20,6 +20,8 @@ struct csv_write_internal {
 
 struct csv_writer* csv_writer_new()
 {
+        init_sig();
+
         struct csv_writer* this = NULL;
 
         MALLOC(this, sizeof(*this));
@@ -32,18 +34,18 @@ struct csv_writer* csv_writer_new()
 
         MALLOC(this->_in, sizeof(*this->_in));
         *this->_in = (struct csv_write_internal) {
-                ""      /* tempname */
+                stdout  /* file */
+                ,NULL   /* buffer */
+                ,NULL   /* tmp_node */
+                ,""     /* tempname */
                 ,""     /* filename */
                 ,""     /* filename_org */
-                ,stdout /* file */
-                ,NULL   /* buffer */
                 ,0      /* bufferSize */
                 ,1      /* delimLen */
                 ,0      /* recordLen */
         };
 
         increase_buffer(&this->_in->buffer, &this->_in->bufferSize);
-        //set_tempoutputfile(this->_in->tempname);
 
         return this;
 
@@ -122,12 +124,14 @@ void csv_open_temp(struct csv_writer* this)
         int fd = mkstemp(this->_in->tempname);
         this->_in->file = fdopen(fd, "w");
         EXIT_IF(!this->_in->file, this->_in->tempname);
+
+        this->_in->tmp_node = addtmp(this->_in->tempname);
 }
 
 void csv_writer_open(struct csv_writer* this, const char* filename)
 {
         STRNCPY(this->_in->filename, filename, PATH_MAX);
-        if (!this->_in->file)
+        if (!this->_in->file || this->_in->file == stdout)
                 csv_open_temp(this);
 }
 
@@ -144,6 +148,7 @@ void csv_writer_close(struct csv_writer* this)
                 EXIT_IF(ret, this->_in->tempname);
                 ret = chmod(this->_in->filename, 0666);
                 EXIT_IF(ret, this->_in->filename);
+                removetmpnode(this->_in->tmp_node);
         } else {
                 FILE* dumpFile = fopen(this->_in->tempname, "r");
                 EXIT_IF(!dumpFile, this->_in->tempname);

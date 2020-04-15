@@ -1,13 +1,7 @@
 #include "util.h"
 #include "csv.h"
 
-/* Signal Handlers */
-static struct sigaction act;
-/* sigset_t and sa_flags only set to shut up valgrind */
-static sigset_t vg_shutup = { {0} };
-static int _signalsReady = FALSE;
 static char blank = '\0';
-
 
 /**
  * Internal Structure
@@ -80,6 +74,8 @@ int csv_parse_rfc4180(struct csv_reader*, const char** line);
 
 struct csv_reader* csv_reader_new()
 {
+        init_sig();
+
         struct csv_reader* reader = NULL;
 
         MALLOC(reader, sizeof(*reader));
@@ -111,19 +107,6 @@ struct csv_reader* csv_reader_new()
 
         increase_buffer(&reader->_in->buffer, &reader->_in->bufferSize);
         MALLOC(reader->_in->_record, sizeof(struct csv_record));
-
-        if (!_signalsReady) {
-                /** Attach signal handlers **/
-                act.sa_mask = vg_shutup;
-                act.sa_flags = 0;
-                act.sa_handler = cleanexit;
-                sigaction(SIGINT, &act, NULL);
-                sigaction(SIGQUIT, &act, NULL);
-                sigaction(SIGTERM, &act, NULL);
-                sigaction(SIGHUP, &act, NULL);
-
-                _signalsReady = TRUE;
-        }
 
         return reader;
 }

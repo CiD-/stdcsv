@@ -26,7 +26,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <limits.h>
-#include <signal.h>
 #include <errno.h>
 
 #include "util.h"

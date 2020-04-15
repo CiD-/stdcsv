@@ -1,9 +1,5 @@
 #include "util.h"
 
-static char _tempInputFile[PATH_MAX] = "\0";
-static char _tempOutputFile[PATH_MAX] = "\0";
-
-
 void increase_buffer(char** buf, size_t* buflen)
 {
         *buflen += BUFFER_FACTOR;
@@ -28,40 +24,85 @@ void increase_buffer_to(char** buf, size_t* buflen, size_t target)
         }
 }
 
+/**
+ * Signal Handlers
+ * sigset_t and sa_flags only set to shut up valgrind
+ */
+static struct sigaction act;
+static sigset_t vg_shutup = { {0} };
+static int _signals_ready = FALSE;
+static struct charnode* _tmp_file_head = NULL;
+
+void init_sig()
+{
+        if (_signals_ready)
+                return;
+        /** Attach signal handlers **/
+        act.sa_mask = vg_shutup;
+        act.sa_flags = 0;
+        act.sa_handler = cleanexit;
+        sigaction(SIGINT, &act, NULL);
+        sigaction(SIGQUIT, &act, NULL);
+        sigaction(SIGTERM, &act, NULL);
+        sigaction(SIGHUP, &act, NULL);
+
+        _signals_ready = TRUE;
+}
+
 
 void cleanexit()
 {
-        cleaninputfile();
-        cleanoutputfile();
+        removealltmp();
         exit(EXIT_FAILURE);
 }
 
-void cleaninputfile()
+struct charnode* addtmp(const char* tmp_file)
 {
-        if(*_tempInputFile && remove(_tempInputFile))
-                perror(_tempInputFile);
+        struct charnode* newnode = NULL;
+        MALLOC(newnode, sizeof(*newnode));
+        *newnode = (struct charnode) {
+                tmp_file
+                ,_tmp_file_head
+                ,NULL
+        };
+
+        if (_tmp_file_head)
+                _tmp_file_head->next = newnode;
+        _tmp_file_head = newnode;
+
+        return newnode;
 }
 
-void cleanoutputfile()
+void removetmpnode(struct charnode* node)
 {
-        if(*_tempOutputFile && remove(_tempOutputFile))
-                perror(_tempOutputFile);
-}
+        if (!node)
+                return;
 
-void set_tempinputfile(char *s)
-{
-        if (s)
-                strncpy(_tempInputFile, s, PATH_MAX - 1);
+        if (node->prev)
+                node->prev->next = node->next;
+        if (node->next)
+                node->next->prev = node->prev;
         else
-                *_tempInputFile = '\0';
+                _tmp_file_head = node->prev;
+
+        FREE(node);
 }
 
-void set_tempoutputfile(char *s)
+void removetmp(struct charnode* node)
 {
-        if (s)
-                strncpy(_tempOutputFile, s, PATH_MAX - 1);
-        else
-                *_tempOutputFile = '\0';
+        if (!node)
+                return;
+
+        if (remove(node->data))
+                perror(node->data);
+
+        removetmpnode(node);
+}
+
+void removealltmp()
+{
+        while (_tmp_file_head)
+                removetmp(_tmp_file_head);
 }
 
 long stringtolong10(const char* s)

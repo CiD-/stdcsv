@@ -6,15 +6,12 @@
 #include <errno.h>
 #include <stdio.h>
 #include <limits.h>
+#include <signal.h>
 #include <string.h>
 
 #define TRUE  1
 #define FALSE 0
 #define BUFFER_FACTOR 128
-
-/** **/
-void increase_buffer(char**, size_t*);
-void increase_buffer_to(char**, size_t*, size_t);
 
 
 /**
@@ -69,6 +66,9 @@ void increase_buffer_to(char**, size_t*, size_t);
         }                                                               \
 }
 
+/**
+ * strncpy but guaranteed to end with '\0'
+ */
 #define STRNCPY(dest, src, n) {         \
         strncpy(dest, src, n-1);        \
         dest[n-1] = '\0';               \
@@ -86,6 +86,24 @@ void increase_buffer_to(char**, size_t*, size_t);
 }
 
 
+/** **/
+void increase_buffer(char**, size_t*);
+void increase_buffer_to(char**, size_t*, size_t);
+
+
+
+/**
+ * Doubly-linked list that keeps
+ * track of tmp file names.
+ */
+struct charnode {
+        const char* data;
+        struct charnode* prev;
+        struct charnode* next;
+};
+
+void init_sig();
+
 /**
  * This function simply removes any temporary files
  * in the event of an error or SIGxxx detected.
@@ -93,26 +111,24 @@ void increase_buffer_to(char**, size_t*, size_t);
 void cleanexit();
 
 /**
- * Remove temporary input file
+ * Add temp file
  */
-void cleaninputfile();
+struct charnode* addtmp(const char* tmp_file);
 
 /**
- * Remove temporary output file
+ * Remove temp node only
  */
-void cleanoutputfile();
+void removetmpnode(struct charnode* node);
 
 /**
- * This sets the name of the temporary input file that will need
- * to be removed when cleanexit is called.
+ * Remove temp file
  */
-void set_tempinputfile(char* s);
+void removetmp(struct charnode* node);
 
 /**
- * This sets the name of the temporary output file that will
- * need to be removed when cleanexit is called.
+ * Remove all temp files
  */
-void set_tempoutputfile(char* s);
+void removealltmp();
 
 /**
  * This function is a wrapper for stringtolong below.
