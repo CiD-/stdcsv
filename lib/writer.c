@@ -103,7 +103,7 @@ void csv_write_record(struct csv_writer* this, struct csv_record* rec)
 
 void csv_writer_reset(struct csv_writer* this)
 {
-        EXIT_IF(this->_in->file == stdin, "Cannot reset stdout\n");
+        EXIT_IF(this->_in->file == stdin, "Cannot reset stdin\n");
 
         if (!this->_in->file)
                 return;

@@ -27,7 +27,6 @@ struct csv_read_internal {
 };
 
 
-
 /**
  * Internal prototypes
  */

@@ -1,13 +1,6 @@
 #ifndef CSV_H
 #define CSV_H
 
-#ifndef TMPDIR
-#define TMPDIR  /tmp/
-#endif
-
-#define STRING_VALUE(arg) #arg
-#define TMPDIR_STR STRING_VALUE(TMPDIR)
-
 #define CSV_GOOD                0
 #define CSV_RESET               -100
 #define CSV_NORMAL_OPEN         -2
@@ -45,6 +38,11 @@ struct csv_record {
         int size;
 };
 
+/**
+ * These structs are meant to function more like
+ * classes. All the available members are used to
+ * change their behavior.
+ */
 struct csv_reader {
         struct csv_read_internal* _in;
         char delimiter[32];
@@ -60,8 +58,6 @@ struct csv_writer {
         char lineEnding[3];
         int quotes;
 };
-
-extern const struct csv_record blank_record;
 
 /**
  * CSV Reader
@@ -142,17 +138,23 @@ void csv_writer_open(struct csv_writer*, const char* fileName);
 void csv_open_temp(struct csv_writer* this);
 
 /**
- *
+ * If we are writing to a file, close and re-open
+ * the file for writing.
  */
 void csv_writer_reset(struct csv_writer*);
 
 /**
- *
+ * csv_writer is always writing to a temp file
+ * if we are not writing to stdout. Here we
+ * close and rename the temp file to the desired
+ * file name. If there is no output file, dump
+ * the temp file to stdout
  */
 void csv_writer_close(struct csv_writer*);
 
 /**
- * Loop through array of struct csv_field, and print the line to csvw_file.
+ * Write a single record into the FILE* stored
+ * in the writer struct
  */
 void csv_write_record(struct csv_writer*, struct csv_record*);
 
