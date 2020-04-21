@@ -1,6 +1,12 @@
 stdcsv
 .gdb_history
 
+# doc files
+Doxyfile
+*.stamp
+man/
+html/
+
 # Check files
 check_libcsv
 *.trs

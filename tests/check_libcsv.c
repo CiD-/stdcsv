@@ -139,29 +139,33 @@ void file_setup(void)
 
 START_TEST(test_parse_rfc)
 {
-        record = csv_parse(reader, "123,456,789");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "123,456,789,");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "123");
         ck_assert_str_eq(record->fields[1], "456");
         ck_assert_str_eq(record->fields[2], "789");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "\"abc\",\"d,ef\",\"ghi\"");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "\"abc\",\"d,ef\",\"ghi\",\"\"");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "d,ef");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "abc,\"de\nf\",ghi");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "abc,\"de\nf\",ghi,");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "de\nf");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "abc,\"de\"\"f\",ghi");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "abc,\"de\"\"f\",ghi,");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "de\"f");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
         uint rows = csv_reader_row_count(reader);
         uint breaks = csv_reader_inline_breaks(reader);
@@ -175,29 +179,33 @@ END_TEST
 START_TEST(test_parse_weak)
 {
         reader->quotes = QUOTE_WEAK;
-        record = csv_parse(reader, "123,456,789");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "123,456,789,");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "123");
         ck_assert_str_eq(record->fields[1], "456");
         ck_assert_str_eq(record->fields[2], "789");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "\"abc\",\"d,ef\",\"ghi\"");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "\"abc\",\"d,ef\",\"ghi\",\"\"");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "d,ef");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "abc,\"de\nf\",ghi");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "abc,\"de\nf\",ghi,");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "de\nf");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "abc,\"de\"\"f\",ghi");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "abc,\"de\"\"f\",ghi,");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "de\"\"f");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
         uint rows = csv_reader_row_count(reader);
         uint breaks = csv_reader_inline_breaks(reader);
@@ -210,30 +218,34 @@ END_TEST
 START_TEST(test_parse_none)
 {
         reader->quotes = QUOTE_NONE;
-        record = csv_parse(reader, "123,456,789");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "123,456,789,");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "123");
         ck_assert_str_eq(record->fields[1], "456");
         ck_assert_str_eq(record->fields[2], "789");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "\"abc\",\"d,ef\",\"ghi\"");
-        ck_assert_int_eq(record->size, 4);
+        record = csv_parse(reader, "\"abc\",\"d,ef\",\"ghi\",\"\"");
+        ck_assert_uint_eq(record->size, 5);
         ck_assert_str_eq(record->fields[0], "\"abc\"");
         ck_assert_str_eq(record->fields[1], "\"d");
         ck_assert_str_eq(record->fields[2], "ef\"");
         ck_assert_str_eq(record->fields[3], "\"ghi\"");
+        ck_assert_str_eq(record->fields[4], "\"\"");
 
-        record = csv_parse(reader, "abc,\"de\nf\",ghi");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "abc,\"de\nf\",ghi,");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "\"de\nf\"");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "abc,\"de\"\"f\",ghi");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "abc,\"de\"\"f\",ghi,");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "\"de\"\"f\"");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
         uint rows = csv_reader_row_count(reader);
         uint breaks = csv_reader_inline_breaks(reader);
@@ -246,29 +258,33 @@ END_TEST
 START_TEST(test_parse_ldrfc)
 {
         strcpy(reader->delimiter, "~^_");
-        record = csv_parse(reader, "123~^_456~^_789");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "123~^_456~^_789~^_");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "123");
         ck_assert_str_eq(record->fields[1], "456");
         ck_assert_str_eq(record->fields[2], "789");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "\"abc\"~^_\"d~^_ef\"~^_\"ghi\"");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "\"abc\"~^_\"d~^_ef\"~^_\"ghi\"~^_\"\"");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "d~^_ef");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "abc~^_\"de\nf\"~^_ghi");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "abc~^_\"de\nf\"~^_ghi~^_");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "de\nf");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "abc~^_\"de\"\"f\"~^_ghi");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "abc~^_\"de\"\"f\"~^_ghi~^_");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "de\"f");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
         uint rows = csv_reader_row_count(reader);
         uint breaks = csv_reader_inline_breaks(reader);
@@ -282,29 +298,33 @@ START_TEST(test_parse_ldweak)
 {
         reader->quotes = QUOTE_WEAK;
         strcpy(reader->delimiter, "~^_");
-        record = csv_parse(reader, "123~^_456~^_789");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "123~^_456~^_789~^_");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "123");
         ck_assert_str_eq(record->fields[1], "456");
         ck_assert_str_eq(record->fields[2], "789");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "\"abc\"~^_\"d~^_ef\"~^_\"ghi\"");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "\"abc\"~^_\"d~^_ef\"~^_\"ghi\"~^_\"\"");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "d~^_ef");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "abc~^_\"de\nf\"~^_ghi");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "abc~^_\"de\nf\"~^_ghi~^_");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "de\nf");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "abc~^_\"de\"\"f\"~^_ghi");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "abc~^_\"de\"\"f\"~^_ghi~^_");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "de\"\"f");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
         uint rows = csv_reader_row_count(reader);
         uint breaks = csv_reader_inline_breaks(reader);
@@ -318,30 +338,34 @@ START_TEST(test_parse_ldnone)
 {
         reader->quotes = QUOTE_NONE;
         strcpy(reader->delimiter, "~^_");
-        record = csv_parse(reader, "123~^_456~^_789");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "123~^_456~^_789~^_");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "123");
         ck_assert_str_eq(record->fields[1], "456");
         ck_assert_str_eq(record->fields[2], "789");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "\"abc\"~^_\"d~^_ef\"~^_\"ghi\"");
-        ck_assert_int_eq(record->size, 4);
+        record = csv_parse(reader, "\"abc\"~^_\"d~^_ef\"~^_\"ghi\"~^_\"\"");
+        ck_assert_uint_eq(record->size, 5);
         ck_assert_str_eq(record->fields[0], "\"abc\"");
         ck_assert_str_eq(record->fields[1], "\"d");
         ck_assert_str_eq(record->fields[2], "ef\"");
         ck_assert_str_eq(record->fields[3], "\"ghi\"");
+        ck_assert_str_eq(record->fields[4], "\"\"");
 
-        record = csv_parse(reader, "abc~^_\"de\nf\"~^_ghi");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "abc~^_\"de\nf\"~^_ghi~^_");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "\"de\nf\"");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
-        record = csv_parse(reader, "abc~^_\"de\"\"f\"~^_ghi");
-        ck_assert_int_eq(record->size, 3);
+        record = csv_parse(reader, "abc~^_\"de\"\"f\"~^_ghi~^_");
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "\"de\"\"f\"");
         ck_assert_str_eq(record->fields[2], "ghi");
+        ck_assert_str_eq(record->fields[3], "");
 
         uint rows = csv_reader_row_count(reader);
         uint breaks = csv_reader_inline_breaks(reader);
@@ -356,25 +380,25 @@ START_TEST(test_file_rfc)
         int ret = 0;
 
         ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(record->size, 3);
+        ck_assert_uint_eq(record->size, 3);
         ck_assert_str_eq(record->fields[0], "123");
         ck_assert_str_eq(record->fields[1], "456");
         ck_assert_str_eq(record->fields[2], "789");
 
         ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(record->size, 3);
+        ck_assert_uint_eq(record->size, 3);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "d|ef");
         ck_assert_str_eq(record->fields[2], "ghi");
 
         ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(record->size, 3);
+        ck_assert_uint_eq(record->size, 3);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "de\nf");
         ck_assert_str_eq(record->fields[2], "ghi");
 
         ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(record->size, 3);
+        ck_assert_uint_eq(record->size, 3);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "de\"f");
         ck_assert_str_eq(record->fields[2], "ghi");
@@ -397,25 +421,25 @@ START_TEST(test_file_weak)
 
         reader->quotes = QUOTE_WEAK;
         ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(record->size, 3);
+        ck_assert_uint_eq(record->size, 3);
         ck_assert_str_eq(record->fields[0], "123");
         ck_assert_str_eq(record->fields[1], "456");
         ck_assert_str_eq(record->fields[2], "789");
 
         ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(record->size, 3);
+        ck_assert_uint_eq(record->size, 3);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "d|ef");
         ck_assert_str_eq(record->fields[2], "ghi");
 
         ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(record->size, 3);
+        ck_assert_uint_eq(record->size, 3);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "de\nf");
         ck_assert_str_eq(record->fields[2], "ghi");
 
         ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(record->size, 3);
+        ck_assert_uint_eq(record->size, 3);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "de\"\"f");
         ck_assert_str_eq(record->fields[2], "ghi");
@@ -438,30 +462,30 @@ START_TEST(test_file_none)
 
         reader->quotes = QUOTE_NONE;
         ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(record->size, 3);
+        ck_assert_uint_eq(record->size, 3);
         ck_assert_str_eq(record->fields[0], "123");
         ck_assert_str_eq(record->fields[1], "456");
         ck_assert_str_eq(record->fields[2], "789");
 
         ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(record->size, 4);
+        ck_assert_uint_eq(record->size, 4);
         ck_assert_str_eq(record->fields[0], "\"abc\"");
         ck_assert_str_eq(record->fields[1], "\"d");
         ck_assert_str_eq(record->fields[2], "ef\"");
         ck_assert_str_eq(record->fields[3], "\"ghi\"");
 
         ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(record->size, 2);
+        ck_assert_uint_eq(record->size, 2);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "\"de");
 
         ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(record->size, 2);
+        ck_assert_uint_eq(record->size, 2);
         ck_assert_str_eq(record->fields[0], "f\"");
         ck_assert_str_eq(record->fields[1], "ghi");
 
         ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(record->size, 3);
+        ck_assert_uint_eq(record->size, 3);
         ck_assert_str_eq(record->fields[0], "abc");
         ck_assert_str_eq(record->fields[1], "\"de\"\"f\"");
         ck_assert_str_eq(record->fields[2], "ghi");
@@ -546,7 +570,7 @@ START_TEST(test_weak_trailing)
 {
         int ret = 0;
         reader->quotes = QUOTE_WEAK;
-        
+
         csv_reader_open(reader, "test_weak_trailing.txt");
 
         ret = csv_get_record(reader, &record);

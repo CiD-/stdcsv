@@ -300,6 +300,7 @@ int csv_append_line(struct csv_reader* this, uint nlCount)
 
 int csv_parse_rfc4180(struct csv_reader* this, const char** line)
 {
+        const char* begin = *line;
         uint delimIdx = 0;
         uint qualified = FALSE;
         uint lastWasQuote = FALSE;
@@ -343,8 +344,12 @@ int csv_parse_rfc4180(struct csv_reader* this, const char** line)
                         continue;
                 }
 
-                if (**line)
+                if (delimIdx == this->_in->delimLen) {
+                        /* Handle Trailing delimiter */
+                        if (!(**line) && *line - begin > this->_in->delimLen)
+                                *line -= this->_in->delimLen;
                         this->_in->bufIdx -= this->_in->delimLen;
+                }
                 this->_in->buffer[this->_in->bufIdx++] = '\0';
 
                 break;
@@ -355,6 +360,7 @@ int csv_parse_rfc4180(struct csv_reader* this, const char** line)
 
 int csv_parse_weak(struct csv_reader* this, const char** line)
 {
+        const char* begin = *line;
         uint delimIdx = 0;
         uint onQuote = FALSE;
         int nlCount = 0;
@@ -389,8 +395,12 @@ int csv_parse_weak(struct csv_reader* this, const char** line)
                         continue;
                 }
 
-                if (**line)
+                if (delimIdx == this->_in->delimLen) {
+                        /* Handle Trailing delimiter */
+                        if (!(**line) && *line - begin > this->_in->delimLen)
+                                *line -= this->_in->delimLen;
                         this->_in->bufIdx -= this->_in->delimLen;
+                }
                 this->_in->bufIdx -= trailing + 1;
                 this->_in->buffer[this->_in->bufIdx++] = '\0';
 
@@ -403,6 +413,7 @@ int csv_parse_weak(struct csv_reader* this, const char** line)
 
 int csv_parse_none(struct csv_reader* this, const char** line)
 {
+        const char* begin = *line;
         uint delimIdx = 0;
 
         for (; **line != '\0' && delimIdx != this->_in->delimLen; ++(*line)) {
@@ -417,8 +428,12 @@ int csv_parse_none(struct csv_reader* this, const char** line)
                         ++this->_in->inlineBreaks;
         }
 
-        if (**line)
+        if (delimIdx == this->_in->delimLen) {
+                /* Handle Trailing delimiter */
+                if (!(**line) && *line - begin > this->_in->delimLen)
+                        *line -= this->_in->delimLen;
                 this->_in->bufIdx -= this->_in->delimLen;
+        }
         this->_in->buffer[this->_in->bufIdx++] = '\0';
 
         return 0;
