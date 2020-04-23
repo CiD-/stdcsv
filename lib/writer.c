@@ -117,7 +117,10 @@ void csv_writer_reset(struct csv_writer* this)
 
 void csv_open_temp(struct csv_writer* this)
 {
-        char* targetdir = dirname(this->_in->filename);
+        char filename_cp[PATH_MAX] = "";
+        STRNCPY(filename_cp, this->_in->filename, PATH_MAX);
+
+        char* targetdir = dirname(filename_cp);
         STRNCPY(this->_in->tempname, targetdir, PATH_MAX);
         strcat(this->_in->tempname, "/csv_XXXXXX");
 
