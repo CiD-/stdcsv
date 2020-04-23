@@ -2,6 +2,7 @@
 #define CSV_H
 
 #define CSV_GOOD                0
+#define CSV_FAIL                5
 #define CSV_RESET               -100
 #define CSV_NORMAL_OPEN         -2
 #define CSV_BUFFER_FACTOR       128

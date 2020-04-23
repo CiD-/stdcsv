@@ -167,7 +167,7 @@ int csv_get_record(struct csv_reader* this, struct csv_record** rec)
         return CSV_GOOD;
 }
 
-void csv_lowerstandard(struct csv_reader* this)
+int csv_lowerstandard(struct csv_reader* this)
 {
         if (!this->failsafeMode || this->_in->file == stdin) {
                 switch(this->quotes) {
@@ -186,7 +186,7 @@ void csv_lowerstandard(struct csv_reader* this)
                         fputs("Unexpected Condition.\n", stderr);
                 }
 
-                exit(EXIT_FAILURE);
+                return CSV_FAIL;
         }
 
         switch(this->quotes) {
@@ -210,6 +210,8 @@ void csv_lowerstandard(struct csv_reader* this)
         this->_in->rows = 0;
         this->_in->inlineBreaks = 0;
         fseek(this->_in->file, 0, SEEK_SET);
+
+        return CSV_RESET;
 }
 
 struct csv_record* csv_parse(struct csv_reader* this, const char* line)
@@ -252,8 +254,8 @@ struct csv_record* csv_parse(struct csv_reader* this, const char* line)
                 }
 
                 if (ret == CSV_RESET) {
-                        csv_lowerstandard(this);
-                        record->size = CSV_RESET;
+                        ret = csv_lowerstandard(this);
+                        record->size = ret;
                         csv_reader_reset(this);
                         return record;
                 }

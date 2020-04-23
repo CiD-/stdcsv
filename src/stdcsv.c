@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
-#include "util.h"
 #include "csv.h"
 
 static const char* helpString =
@@ -51,6 +50,9 @@ typedef struct csv_reader csv_reader;
 typedef struct csv_writer csv_writer;
 typedef struct csv_record csv_record;
 
+/** Conflicting Options **/
+static int in_place_edit = 0;
+static int set_output_file = 0;
 
 void parseargs(char c, csv_reader* reader, csv_writer* writer)
 {
@@ -81,7 +83,7 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
         }
                 break;
         case 'i': /* in-place-edit */
-                //csvw_set_inplaceedit(1);
+                in_place_edit = TRUE;
                 break;
         case 'Q': /* out-quotes */
                 if(!strcasecmp(optarg, "ALL"))
@@ -130,8 +132,8 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                 STRNCPY(reader->inlineBreak, optarg, 32);
                 break;
         case 'o': /* output-file */
-                //STRNCPY(writer->filename, optarg, PATH_MAX);
                 csv_writer_open(writer, optarg);
+                set_output_file = 1;
                 break;
         case 'W': /* windows-line-ending */
                 STRNCPY(writer->lineEnding, "\r\n", 3);
@@ -184,19 +186,39 @@ int main (int argc, char **argv)
                                   long_options, &option_index)) != -1)
                 parseargs(c, reader, writer);
 
+        /* Check for conflicting options */
+        if (set_output_file + in_place_edit == 2) {
+                fputs("Conflicting options: -i -o\n", stderr);
+                exit(EXIT_FAILURE);
+        }
+
         int ret = 0;
 
         do {
-                /** If a file was provided, open it for reading **/
-                if (optind != argc && ret != CSV_RESET)
+                /**
+                 * If a file was provided, open it for reading.
+                 * If not and failsafe mode is on, print warning.
+                 */
+                if (optind != argc && ret != CSV_RESET) {
                         csv_reader_open(reader, argv[optind]);
+                        if (in_place_edit)
+                            csv_writer_open(writer, argv[optind]);
+                } else if (reader->failsafeMode) {
+                        fputs("Warning: Failsafe mode does not work with stdin\n", stderr);
+                }
 
+                /* Hot loop */
                 while ((ret = csv_get_record(reader, &record)) == CSV_GOOD)
                         csv_write_record(writer, record);
-
-                if (ret == CSV_RESET) {
+        
+                /* Post process */
+                switch (ret) {
+                case CSV_RESET:
                         csv_writer_reset(writer);
-                } else {
+                        break;
+                case CSV_FAIL:
+                        optind = argc; /* Implicit fall-through */
+                default:
                         csv_writer_close(writer);
                         ++optind;
                 }
@@ -206,5 +228,5 @@ int main (int argc, char **argv)
         csv_reader_free(reader);
         csv_writer_free(writer);
 
-        return 0;
+        return ret;
 }
