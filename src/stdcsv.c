@@ -228,5 +228,7 @@ int main (int argc, char **argv)
         csv_reader_free(reader);
         csv_writer_free(writer);
 
+        if (ret != CSV_FAIL)
+                return 0;
         return ret;
 }
