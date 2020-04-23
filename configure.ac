@@ -5,7 +5,12 @@ AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 AM_CFLAGS="-g -O0 -fsanitize=address -Wall"
 
 # Check
-PKG_CHECK_MODULES([CHECK], [check >= 0.12.0])
+AC_ARG_ENABLE([check],
+    AS_HELP_STRING([--disable-check], [Disable feature check]))
+
+AS_IF([test "x$enable_check" != "xno"], [
+  PKG_CHECK_MODULES([CHECK], [check >= 0.12.0])dnl Do the stuff needed for enabling the feature
+])
 #AM_PATH_CHECK
 
 AM_PROG_AR
