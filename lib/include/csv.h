@@ -22,8 +22,6 @@
 #include <limits.h>
 #include <errno.h>
 
-#include "util.h"
-
 /**
  * CSV Structures
  */

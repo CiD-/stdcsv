@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include "util.h"
 #include "csv.h"
 
 static const char* helpString =

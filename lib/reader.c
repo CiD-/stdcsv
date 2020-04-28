@@ -1,4 +1,5 @@
 #include "util.h"
+#include "safegetline.h"
 #include "csv.h"
 
 static char blank = '\0';
