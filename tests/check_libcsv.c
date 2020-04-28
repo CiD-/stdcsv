@@ -1,6 +1,7 @@
 #include <check.h>
 #include <stdlib.h>
 #include "../lib/include/csv.h"
+#include "../lib/include/safegetline.h"
 
 char* buf = NULL;
 size_t buflen = 0;

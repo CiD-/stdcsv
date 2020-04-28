@@ -12968,7 +12968,7 @@ if test "x$have_check" = "xyes"; then :
 
 else
   if test "x$with_check" = "xyes"; then :
-  as_fn_error $? "check not found. Try with --without-check" "$LINENO" 5
+  as_fn_error $? "check not found." "$LINENO" 5
 
 fi
 

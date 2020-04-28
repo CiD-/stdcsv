@@ -23,7 +23,6 @@
 #include <errno.h>
 
 #include "util.h"
-#include "safegetline.h"
 
 /**
  * CSV Structures
