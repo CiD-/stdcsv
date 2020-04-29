@@ -1,6 +1,10 @@
 #ifndef CSV_H
 #define CSV_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define CSV_GOOD                0
 #define CSV_FAIL                5
 #define CSV_RESET               -100
@@ -156,5 +160,8 @@ void csv_writer_close(struct csv_writer*);
  */
 void csv_write_record(struct csv_writer*, struct csv_record*);
 
-
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* Include guard */
