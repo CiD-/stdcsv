@@ -134,10 +134,10 @@ void csv_writer_free(struct csv_writer*);
 void csv_writer_open(struct csv_writer*, const char* fileName);
 
 /**
- * Open a temp FILE* for this->_in->file.  This will
- * be used for output in case we do a reset.
+ * Open a temp FILE* that will be used for 
+ * output in case we do a reset.
  */
-void csv_open_temp(struct csv_writer* this);
+void csv_open_temp(struct csv_writer*);
 
 /**
  * If we are writing to a file, close and re-open
