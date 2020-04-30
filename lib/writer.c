@@ -101,21 +101,19 @@ void csv_write_record(struct csv_writer* this, struct csv_record* rec)
         fputs(this->lineEnding, this->_in->file);
 }
 
-void csv_writer_reset(struct csv_writer* this)
+int csv_writer_reset(struct csv_writer* this)
 {
-        EXIT_IF(this->_in->file == stdin, "Cannot reset stdin\n");
-
-        if (!this->_in->file)
-                return;
-
-        EXIT_IF(fclose(this->_in->file) == EOF, this->_in->tempname);
+        FAIL_IF(this->_in->file == stdout, "Cannot reset stdout");
+        FAIL_IF(!this->_in->file, "No file to reset");
+        FAIL_IF(fclose(this->_in->file) == EOF, this->_in->tempname);
         //this->_in->file = NULL;
         this->_in->file = fopen(this->_in->tempname, "w");
-        EXIT_IF(!this->_in->file, this->_in->tempname);
+        FAIL_IF(!this->_in->file, this->_in->tempname);
 
+        return 0;
 }
 
-void csv_open_temp(struct csv_writer* this)
+int csv_open_temp(struct csv_writer* this)
 {
         char filename_cp[PATH_MAX] = "";
         STRNCPY(filename_cp, this->_in->filename, PATH_MAX);
@@ -126,42 +124,47 @@ void csv_open_temp(struct csv_writer* this)
 
         int fd = mkstemp(this->_in->tempname);
         this->_in->file = fdopen(fd, "w");
-        EXIT_IF(!this->_in->file, this->_in->tempname);
+        FAIL_IF(!this->_in->file, this->_in->tempname);
 
-        this->_in->tmp_node = addtmp(this->_in->tempname);
+        this->_in->tmp_node = tmp_push(this->_in->tempname);
+
+        return 0;
 }
 
-void csv_writer_open(struct csv_writer* this, const char* filename)
+int csv_writer_open(struct csv_writer* this, const char* filename)
 {
+        FAIL_IF(this->_in->file, "File already open");
         STRNCPY(this->_in->filename, filename, PATH_MAX);
-        if (!this->_in->file || this->_in->file == stdout)
-                csv_open_temp(this);
+        return csv_open_temp(this);
 }
 
-void csv_writer_close(struct csv_writer* this)
+int csv_writer_close(struct csv_writer* this)
 {
         if (this->_in->file == stdout)
-                return;
+                return 0;
 
-        EXIT_IF(fclose(this->_in->file) == EOF, this->_in->tempname);
+        FAIL_IF(fclose(this->_in->file) == EOF, this->_in->tempname);
         this->_in->file = NULL;
 
         if (this->_in->filename[0] != '\0') {
                 int ret = rename(this->_in->tempname, this->_in->filename);
-                EXIT_IF(ret, this->_in->tempname);
+                FAIL_IF(ret, this->_in->tempname);
                 ret = chmod(this->_in->filename, 0666);
-                EXIT_IF(ret, this->_in->filename);
-                removetmpnode(this->_in->tmp_node);
+                FAIL_IF(ret, this->_in->filename);
+                tmp_remove_node(this->_in->tmp_node);
         } else {
                 FILE* dumpFile = fopen(this->_in->tempname, "r");
-                EXIT_IF(!dumpFile, this->_in->tempname);
+                FAIL_IF(!dumpFile, this->_in->tempname);
 
                 char c = '\0';
                 while ((c = getc(dumpFile)) != EOF)
                         putchar(c);
 
-                EXIT_IF(fclose(dumpFile) == EOF, this->_in->tempname);
-                //cleanoutputfile();
+                FAIL_IF(fclose(dumpFile) == EOF, this->_in->tempname);
+                tmp_remove_file(this->_in->tmp_node->data);
+                tmp_remove_node(this->_in->tmp_node);
         }
+
+        return 0;
 }
 

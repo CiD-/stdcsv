@@ -62,6 +62,11 @@ struct csv_writer {
 };
 
 /**
+ * CSV Global
+ */
+void csv_perror();
+
+/**
  * CSV Reader
  */
 
@@ -89,19 +94,19 @@ int csv_get_record(struct csv_reader*, struct csv_record**);
  * Reset statistics. If their is an associated file
  * to the reader, seek to the beginning of it.
  */
-void csv_reader_reset(struct csv_reader*);
+int csv_reader_reset(struct csv_reader*);
 
 /**
  * Open a csv file for reading.  This file will close itself
  * when reading reaches the end of the file.
  */
-void csv_reader_open(struct csv_reader*, const char* fileName);
+int csv_reader_open(struct csv_reader*, const char* fileName);
 
 /**
  * This function is available but is called internally
  * when the end of the file has been reached.
  */
-void csv_reader_close(struct csv_reader*);
+int csv_reader_close(struct csv_reader*);
 
 /**
  * Parse an individual const char*. This function is used
@@ -131,19 +136,19 @@ void csv_writer_free(struct csv_writer*);
 /**
  * Open a file for writing csv conents
  */
-void csv_writer_open(struct csv_writer*, const char* fileName);
+int csv_writer_open(struct csv_writer*, const char* fileName);
 
 /**
- * Open a temp FILE* that will be used for 
+ * Open a temp FILE* that will be used for
  * output in case we do a reset.
  */
-void csv_open_temp(struct csv_writer*);
+int csv_open_temp(struct csv_writer*);
 
 /**
  * If we are writing to a file, close and re-open
  * the file for writing.
  */
-void csv_writer_reset(struct csv_writer*);
+int csv_writer_reset(struct csv_writer*);
 
 /**
  * csv_writer is always writing to a temp file
@@ -152,7 +157,7 @@ void csv_writer_reset(struct csv_writer*);
  * file name. If there is no output file, dump
  * the temp file to stdout
  */
-void csv_writer_close(struct csv_writer*);
+int csv_writer_close(struct csv_writer*);
 
 /**
  * Write a single record into the FILE* stored
@@ -164,4 +169,4 @@ void csv_write_record(struct csv_writer*, struct csv_record*);
 }
 #endif
 
-#endif /* Include guard */
+#endif /* CSV_H */

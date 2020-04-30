@@ -6,26 +6,16 @@
 #include <errno.h>
 #include <stdio.h>
 #include <limits.h>
-#include <signal.h>
 #include <string.h>
+
+#include "charnode.h"
+#include "csvsignal.h"
+#include "csverror.h"
 
 #define TRUE  1
 #define FALSE 0
 #define BUFFER_FACTOR 128
 
-
-/**
- * Wrapper for checking errors.
- */
-#define EXIT_IF(condition, errormsg) {      \
-        if (condition) {                    \
-                if (errno)                  \
-                    perror(errormsg);       \
-                else                        \
-                    fputs(errormsg, stderr);\
-                cleanexit();                \
-        }                                   \
-}
 
 /**
  * malloc wrapper that does error checking
@@ -78,12 +68,34 @@
 /**
  * Free pointer if not NULL and set to NULL
  */
-#define FREE(ptr) {             \
-        if (ptr) {              \
-                free(ptr);      \
-                ptr = NULL;     \
-        }                       \
+#define FREE(ptr) {                 \
+        if (ptr) {                  \
+                free((void*)ptr);   \
+                ptr = NULL;         \
+        }                           \
 }
+
+#define FAIL_IF(condition, errmsg)  {                   \
+        if (condition) {                                \
+                char* se = NULL;                        \
+                size_t errsize = strlen(errmsg) + 1;    \
+                if (errno) {                            \
+                        se = strerror(errno);           \
+                        errsize += strlen(se) + 2;      \
+                }                                       \
+                char* newmsg = NULL;                    \
+                MALLOC(newmsg, errsize);                \
+                strcpy(newmsg, errmsg);                 \
+                if (se) {                               \
+                        strcat(newmsg, ": ");           \
+                        strcat(newmsg, se);             \
+                }                                       \
+                err_push(newmsg);                       \
+                return -1;                              \
+        }                                               \
+}
+
+
 
 
 /** **/
@@ -91,44 +103,6 @@ void increase_buffer(char**, size_t*);
 void increase_buffer_to(char**, size_t*, size_t);
 
 
-
-/**
- * Doubly-linked list that keeps
- * track of tmp file names.
- */
-struct charnode {
-        const char* data;
-        struct charnode* prev;
-        struct charnode* next;
-};
-
-void init_sig();
-
-/**
- * This function simply removes any temporary files
- * in the event of an error or SIGxxx detected.
- */
-void cleanexit();
-
-/**
- * Add temp file
- */
-struct charnode* addtmp(const char* tmp_file);
-
-/**
- * Remove temp node only
- */
-void removetmpnode(struct charnode* node);
-
-/**
- * Remove temp file
- */
-void removetmp(struct charnode* node);
-
-/**
- * Remove all temp files
- */
-void removealltmp();
 
 /**
  * This function is a wrapper for stringtolong below.

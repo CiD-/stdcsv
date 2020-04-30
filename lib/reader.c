@@ -2,8 +2,6 @@
 #include "safegetline.h"
 #include "csv.h"
 
-static char blank = '\0';
-
 /**
  * Internal Structure
  */
@@ -271,11 +269,8 @@ struct csv_record* csv_parse(struct csv_reader* this, const char* line)
 
         if (this->normal > 0) {
                 /* Append fields if we are short */
-                while (this->normal > record->size) {
-                        if (++(record->size) > this->_in->fieldsAllocated)
-                                csv_growrecord(this);
-                        record->fields[record->size-1] = &blank;
-                }
+                while (this->normal > record->size)
+                        csv_append_empty_field(this);
                 record->size = this->normal;
         }
 
@@ -484,21 +479,27 @@ void csv_determine_delimiter(struct csv_reader* this, const char* header)
         this->_in->delimLen = 1;
 }
 
-void csv_reader_open(struct csv_reader* this, const char* fileName)
+int csv_reader_open(struct csv_reader* this, const char* fileName)
 {
         this->_in->file = fopen(fileName, "r");
-        EXIT_IF(!this->_in->file, fileName);
+        FAIL_IF(!this->_in->file, fileName);
+        if (this->_in->file)
+               return FALSE;
+        return TRUE;
 }
 
-void csv_reader_close(struct csv_reader* this)
+int csv_reader_close(struct csv_reader* this)
 {
         if (this->_in->file && this->_in->file != stdin) {
                 int ret = fclose(this->_in->file);
-                EXIT_IF(ret, "fclose");
+                //FAIL_IF(ret, "fclose");
+                if (ret)
+                        return 0;
         }
+        return FALSE;
 }
 
-void csv_reader_reset(struct csv_reader* this)
+int csv_reader_reset(struct csv_reader* this)
 {
         this->normal = this->_in->normalOrg;
         this->delimiter[0] = '\0';
@@ -508,6 +509,9 @@ void csv_reader_reset(struct csv_reader* this)
         this->_in->buffer[0] = '\0';
         if (this->_in->file && this->_in->file != stdin) {
                 int ret = fseek(this->_in->file, 0, SEEK_SET);
-                EXIT_IF(ret, "fseek");
+                //FAIL_IF(ret, "fseek");
+                if (ret)
+                        return TRUE;
         }
+        return FALSE;
 }

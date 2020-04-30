@@ -133,7 +133,8 @@ am__uninstall_files_from_dir = { \
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libcsv_la_LIBADD =
-am_libcsv_la_OBJECTS = reader.lo writer.lo util.lo safegetline.lo
+am_libcsv_la_OBJECTS = reader.lo writer.lo util.lo safegetline.lo \
+	csv.lo csverror.lo csvsignal.lo charnode.lo
 libcsv_la_OBJECTS = $(am_libcsv_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -154,9 +155,10 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/reader.Plo \
-	./$(DEPDIR)/safegetline.Plo ./$(DEPDIR)/util.Plo \
-	./$(DEPDIR)/writer.Plo
+am__depfiles_remade = ./$(DEPDIR)/charnode.Plo ./$(DEPDIR)/csv.Plo \
+	./$(DEPDIR)/csverror.Plo ./$(DEPDIR)/csvsignal.Plo \
+	./$(DEPDIR)/reader.Plo ./$(DEPDIR)/safegetline.Plo \
+	./$(DEPDIR)/util.Plo ./$(DEPDIR)/writer.Plo
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -373,7 +375,7 @@ SUBDIRS = docs
 AM_CPPFLAGS = -Iinclude
 include_HEADERS = include/csv.h 
 lib_LTLIBRARIES = libcsv.la
-libcsv_la_SOURCES = include/util.h include/safegetline.h reader.c writer.c util.c safegetline.c
+libcsv_la_SOURCES = include/charnode.h include/util.h include/csverror.h include/csvsignal.h include/safegetline.h reader.c writer.c util.c safegetline.c csv.c csverror.c csvsignal.c charnode.c
 all: all-recursive
 
 .SUFFIXES:
@@ -452,6 +454,10 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/charnode.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/csv.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/csverror.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/csvsignal.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/reader.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/safegetline.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Plo@am__quote@ # am--include-marker
@@ -712,7 +718,11 @@ clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
 	mostlyclean-am
 
 distclean: distclean-recursive
-		-rm -f ./$(DEPDIR)/reader.Plo
+		-rm -f ./$(DEPDIR)/charnode.Plo
+	-rm -f ./$(DEPDIR)/csv.Plo
+	-rm -f ./$(DEPDIR)/csverror.Plo
+	-rm -f ./$(DEPDIR)/csvsignal.Plo
+	-rm -f ./$(DEPDIR)/reader.Plo
 	-rm -f ./$(DEPDIR)/safegetline.Plo
 	-rm -f ./$(DEPDIR)/util.Plo
 	-rm -f ./$(DEPDIR)/writer.Plo
@@ -761,7 +771,11 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-recursive
-		-rm -f ./$(DEPDIR)/reader.Plo
+		-rm -f ./$(DEPDIR)/charnode.Plo
+	-rm -f ./$(DEPDIR)/csv.Plo
+	-rm -f ./$(DEPDIR)/csverror.Plo
+	-rm -f ./$(DEPDIR)/csvsignal.Plo
+	-rm -f ./$(DEPDIR)/reader.Plo
 	-rm -f ./$(DEPDIR)/safegetline.Plo
 	-rm -f ./$(DEPDIR)/util.Plo
 	-rm -f ./$(DEPDIR)/writer.Plo
