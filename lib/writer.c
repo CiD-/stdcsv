@@ -113,7 +113,7 @@ int csv_writer_reset(struct csv_writer* this)
         return 0;
 }
 
-int csv_open_temp(struct csv_writer* this)
+int csv_writer_mktmp(struct csv_writer* this)
 {
         char filename_cp[PATH_MAX] = "";
         STRNCPY(filename_cp, this->_in->filename, PATH_MAX);
@@ -131,11 +131,18 @@ int csv_open_temp(struct csv_writer* this)
         return 0;
 }
 
+int csv_writer_isopen(struct csv_writer* this)
+{
+        if (this->_in->file)
+                return TRUE;
+        return FALSE;
+}
+
 int csv_writer_open(struct csv_writer* this, const char* filename)
 {
         FAIL_IF(this->_in->file, "File already open");
         STRNCPY(this->_in->filename, filename, PATH_MAX);
-        return csv_open_temp(this);
+        return csv_writer_mktmp(this);
 }
 
 int csv_writer_close(struct csv_writer* this)

@@ -153,7 +153,8 @@ int csv_get_record(struct csv_reader* this, struct csv_record** rec)
         if (ret == EOF) {
                 this->_in->fieldsAllocated = 0;
                 this->normal = this->_in->normalOrg;
-                csv_reader_close(this);
+                if (csv_reader_close(this) == CSV_FAIL)
+                        csv_perror();
                 *rec = NULL;
                 return ret;
         }
@@ -202,7 +203,7 @@ int csv_lowerstandard(struct csv_reader* this)
                 break;
         default:
                 fputs("Unexpected Condition.\n", stderr);
-                exit(EXIT_FAILURE);
+                return CSV_FAIL;
         }
 
         --this->quotes;
@@ -483,20 +484,16 @@ int csv_reader_open(struct csv_reader* this, const char* fileName)
 {
         this->_in->file = fopen(fileName, "r");
         FAIL_IF(!this->_in->file, fileName);
-        if (this->_in->file)
-               return FALSE;
-        return TRUE;
+        return 0;
 }
 
 int csv_reader_close(struct csv_reader* this)
 {
         if (this->_in->file && this->_in->file != stdin) {
                 int ret = fclose(this->_in->file);
-                //FAIL_IF(ret, "fclose");
-                if (ret)
-                        return 0;
+                FAIL_IF(ret, "fclose");
         }
-        return FALSE;
+        return 0;
 }
 
 int csv_reader_reset(struct csv_reader* this)
@@ -509,9 +506,7 @@ int csv_reader_reset(struct csv_reader* this)
         this->_in->buffer[0] = '\0';
         if (this->_in->file && this->_in->file != stdin) {
                 int ret = fseek(this->_in->file, 0, SEEK_SET);
-                //FAIL_IF(ret, "fseek");
-                if (ret)
-                        return TRUE;
+                FAIL_IF(ret, "fseek");
         }
-        return FALSE;
+        return 0;
 }

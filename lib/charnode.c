@@ -37,11 +37,11 @@ void cn_remove(struct charnode** head, struct charnode* node)
 const char* cn_pop(struct charnode** head)
 {
         struct charnode* newhead = (*head)->prev;
+        const char* data = (*head)->data;
         FREE(*head);
-        if (!newhead)
-                return NULL;
+        if (newhead)
+                newhead->next = NULL;
         (*head) = newhead;
-        (*head)->next = NULL;
-        return (*head)->data;
+        return data;
 }
 

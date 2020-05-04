@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 #define CSV_GOOD                0
-#define CSV_FAIL                5
+#define CSV_FAIL                -1
 #define CSV_RESET               -100
 #define CSV_NORMAL_OPEN         -2
 #define CSV_BUFFER_FACTOR       128
@@ -65,6 +65,7 @@ struct csv_writer {
  * CSV Global
  */
 void csv_perror();
+void csv_perror_exit();
 
 /**
  * CSV Reader
@@ -134,6 +135,11 @@ struct csv_writer* csv_writer_new();
 void csv_writer_free(struct csv_writer*);
 
 /**
+ * return TRUE if writer has open file
+ */
+int csv_writer_isopen(struct csv_writer*);
+
+/**
  * Open a file for writing csv conents
  */
 int csv_writer_open(struct csv_writer*, const char* fileName);
@@ -142,7 +148,7 @@ int csv_writer_open(struct csv_writer*, const char* fileName);
  * Open a temp FILE* that will be used for
  * output in case we do a reset.
  */
-int csv_open_temp(struct csv_writer*);
+int csv_writer_mktmp(struct csv_writer*);
 
 /**
  * If we are writing to a file, close and re-open

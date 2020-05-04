@@ -75,26 +75,6 @@
         }                           \
 }
 
-#define FAIL_IF(condition, errmsg)  {                   \
-        if (condition) {                                \
-                char* se = NULL;                        \
-                size_t errsize = strlen(errmsg) + 1;    \
-                if (errno) {                            \
-                        se = strerror(errno);           \
-                        errsize += strlen(se) + 2;      \
-                }                                       \
-                char* newmsg = NULL;                    \
-                MALLOC(newmsg, errsize);                \
-                strcpy(newmsg, errmsg);                 \
-                if (se) {                               \
-                        strcat(newmsg, ": ");           \
-                        strcat(newmsg, se);             \
-                }                                       \
-                err_push(newmsg);                       \
-                return -1;                              \
-        }                                               \
-}
-
 
 
 
