@@ -133,14 +133,14 @@ int csv_writer_mktmp(struct csv_writer* this)
 
 int csv_writer_isopen(struct csv_writer* this)
 {
-        if (this->_in->file)
+        if (this->_in->file && this->_in->file != stdout)
                 return TRUE;
         return FALSE;
 }
 
 int csv_writer_open(struct csv_writer* this, const char* filename)
 {
-        FAIL_IF(this->_in->file, "File already open");
+        FAIL_IF(csv_writer_isopen(this), "File already open");
         STRNCPY(this->_in->filename, filename, PATH_MAX);
         return csv_writer_mktmp(this);
 }

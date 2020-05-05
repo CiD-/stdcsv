@@ -34,7 +34,7 @@ void cleanexit()
 
 struct charnode* tmp_push(const char* tmp_file)
 {
-        return cn_push(&_tmp_file_head, tmp_file);
+        return cn_push(&_tmp_file_head, strdup(tmp_file));
 }
 
 void tmp_remove_node(struct charnode* node)
