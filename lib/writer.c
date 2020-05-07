@@ -61,11 +61,10 @@ void csv_writer_free(struct csv_writer* this)
 void csv_write_record(struct csv_writer* this, struct csv_record* rec)
 {
         int i = 0;
-        unsigned int j = 0;
-        int writeIndex = 0;
+        uint writeIndex = 0;
         int quoteCurrentField = 0;
         uint delimIdx = 0;
-        char c = 0;
+        char* c = NULL;
 
         for (i = 0; i < rec->size; ++i) {
                 if (i)
@@ -73,20 +72,21 @@ void csv_write_record(struct csv_writer* this, struct csv_record* rec)
 
                 quoteCurrentField = (this->quotes == QUOTE_ALL);
                 writeIndex = 0;
-                for (j = 0; j < strlen(rec->fields[i]); ++j) {
-                        c = rec->fields[i][j];
-                        this->_in->buffer[writeIndex++] = c;
-                        if (c == '"' && this->quotes >= QUOTE_RFC4180) {
+                for (c = rec->fields[i]; *c; ++c) {
+                        if (writeIndex + 3 > this->_in->bufferSize)
+                                increase_buffer(&this->_in->buffer, &this->_in->bufferSize);
+                        this->_in->buffer[writeIndex++] = *c;
+                        if (*c == '"' && this->quotes >= QUOTE_RFC4180) {
                                 this->_in->buffer[writeIndex++] = '"';
                                 quoteCurrentField = TRUE;
                         }
                         if (this->quotes && !quoteCurrentField) {
-                                if (strhaschar("\"\n\r", c))
+                                if (strhaschar("\"\n\r", *c))
                                         quoteCurrentField = 1;
-                                else if (c == this->delimiter[delimIdx])
+                                else if (*c == this->delimiter[delimIdx])
                                         ++delimIdx;
                                 else
-                                        delimIdx = (c == this->delimiter[0]) ? 1 : 0;
+                                        delimIdx = (*c == this->delimiter[0]) ? 1 : 0;
 
                                 if (delimIdx == this->_in->delimLen)
                                         quoteCurrentField = TRUE;
@@ -140,7 +140,8 @@ int csv_writer_isopen(struct csv_writer* this)
 
 int csv_writer_open(struct csv_writer* this, const char* filename)
 {
-        FAIL_IF(csv_writer_isopen(this), "File already open");
+        if(!csv_writer_isopen(this))
+                csv_writer_mktmp(this);
         STRNCPY(this->_in->filename, filename, PATH_MAX);
         return csv_writer_mktmp(this);
 }
