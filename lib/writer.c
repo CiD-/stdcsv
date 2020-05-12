@@ -140,10 +140,11 @@ int csv_writer_isopen(struct csv_writer* this)
 
 int csv_writer_open(struct csv_writer* this, const char* filename)
 {
+        int ret = 0;
         if(!csv_writer_isopen(this))
-                csv_writer_mktmp(this);
+                ret = csv_writer_mktmp(this);
         STRNCPY(this->_in->filename, filename, PATH_MAX);
-        return csv_writer_mktmp(this);
+        return ret;
 }
 
 int csv_writer_close(struct csv_writer* this)
