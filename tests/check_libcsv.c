@@ -534,6 +534,40 @@ START_TEST(test_multiple_eol)
         ck_assert_uint_eq(breaks, 2);
 }
 
+
+START_TEST(test_realloc_append)
+{
+        int ret = 0;
+
+        reader->failsafeMode = TRUE;
+
+        csv_reader_open(reader, "test_realloc_append.txt");
+        ret = csv_get_record(reader, &record);
+        ck_assert_int_eq(ret, CSV_GOOD);
+        ck_assert_uint_eq(record->size, 3);
+        ck_assert_str_eq(record->fields[0], "aaa");
+        ck_assert_str_eq(record->fields[1], "1234567890\n1234567890123456789012345678901234567890123456789012345678901234567890\n1234567890123456789012345678901234567890123456789012345678901234567890");
+        ck_assert_str_eq(record->fields[2], "ccc");
+
+        ret = csv_get_record(reader, &record);
+        ck_assert_int_eq(ret, CSV_GOOD);
+        ck_assert_uint_eq(record->size, 3);
+        ck_assert_str_eq(record->fields[0], "abc");
+        ck_assert_str_eq(record->fields[1], "def");
+        ck_assert_str_eq(record->fields[2], "ghi");
+
+        ret = csv_get_record(reader, &record);
+        ck_assert_ptr_null(record);
+        ck_assert_int_eq(ret, EOF);
+
+        uint rows = csv_reader_row_count(reader);
+        uint breaks = csv_reader_inline_breaks(reader);
+
+        ck_assert_uint_eq(rows, 2);
+        ck_assert_uint_eq(breaks, 2);
+}
+
+
 START_TEST(test_fs_eof)
 {
         int ret = 0;
@@ -676,6 +710,11 @@ Suite* csv_reader_suite(void)
         tcase_add_checked_fixture(tc_multi_eol, parse_setup, parse_teardown);
         tcase_add_test(tc_multi_eol, test_multiple_eol);
         suite_add_tcase(s, tc_multi_eol);
+
+        TCase* tc_realloc_append = tcase_create("realloc_append");
+        tcase_add_checked_fixture(tc_realloc_append, parse_setup, parse_teardown);
+        tcase_add_test(tc_realloc_append, test_realloc_append);
+        suite_add_tcase(s, tc_realloc_append);
 
         TCase* tc_failsafe_eof = tcase_create("failsafe_eof");
         tcase_add_checked_fixture(tc_failsafe_eof, parse_setup, parse_teardown);

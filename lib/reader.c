@@ -293,9 +293,18 @@ int csv_append_line(struct csv_reader* this, uint nlCount)
 
         uint nlLen = strlen(this->inlineBreak);
         if (this->_in->rawLength + nlLen * nlCount >= this->_in->bufferSize) {
-               increase_buffer_to(&this->_in->buffer,
+
+                increase_buffer_to(&this->_in->buffer,
                                   &this->_in->bufferSize,
                                   this->_in->rawLength + nlLen * nlCount);
+
+                /* Move all pointers from _record->fields */
+                struct csv_record* rec = this->_in->_record;
+                int i = rec->size - 1;
+                for (; i >= 0; --i) {
+                        int distance = rec->fields[i] - rec->fields[0];
+                        rec->fields[i] = this->_in->buffer + distance;
+                }
         }
 
         strcpy(&this->_in->buffer[this->_in->bufIdx], this->inlineBreak);
