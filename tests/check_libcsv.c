@@ -509,6 +509,31 @@ START_TEST(test_file_none)
 }
 END_TEST
 
+START_TEST(test_multiple_eol)
+{
+        int ret = 0;
+
+        reader->failsafeMode = TRUE;
+
+        csv_reader_open(reader, "test_multi_eol.txt");
+        ret = csv_get_record(reader, &record);
+        ck_assert_int_eq(ret, CSV_GOOD);
+        ck_assert_uint_eq(record->size, 3);
+        ck_assert_str_eq(record->fields[0], "123");
+        ck_assert_str_eq(record->fields[1], "4\n5\n6");
+        ck_assert_str_eq(record->fields[2], "789");
+
+        ret = csv_get_record(reader, &record);
+        ck_assert_ptr_null(record);
+        ck_assert_int_eq(ret, EOF);
+
+        uint rows = csv_reader_row_count(reader);
+        uint breaks = csv_reader_inline_breaks(reader);
+
+        ck_assert_uint_eq(rows, 1);
+        ck_assert_uint_eq(breaks, 2);
+}
+
 START_TEST(test_fs_eof)
 {
         int ret = 0;
@@ -646,6 +671,11 @@ Suite* csv_reader_suite(void)
         tcase_add_checked_fixture(tc_file_none, file_setup, parse_teardown);
         tcase_add_test(tc_file_none, test_file_none);
         suite_add_tcase(s, tc_file_none);
+
+        TCase* tc_multi_eol = tcase_create("multi_eol");
+        tcase_add_checked_fixture(tc_multi_eol, parse_setup, parse_teardown);
+        tcase_add_test(tc_multi_eol, test_multiple_eol);
+        suite_add_tcase(s, tc_multi_eol);
 
         TCase* tc_failsafe_eof = tcase_create("failsafe_eof");
         tcase_add_checked_fixture(tc_failsafe_eof, parse_setup, parse_teardown);
