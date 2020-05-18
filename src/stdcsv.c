@@ -209,13 +209,13 @@ int main (int argc, char **argv)
                             csv_writer_open(writer, argv[optind]) == CSV_FAIL)
                                 csv_perror_exit();
 
-                        /* If failsafe mode and writer not openea (AKA stdin),
+                        /* If failsafe mode and writer not opened (AKA stdout),
                          * open temp file for writing.
                          */
                         if (reader->failsafeMode && !csv_writer_isopen(writer))
                                 csv_writer_mktmp(writer);
 
-                } else if (reader->failsafeMode) {
+                } else if (reader->failsafeMode && ret != CSV_RESET) {
                         fputs("Warning: Failsafe mode does not work with stdin\n", stderr);
                 }
 
