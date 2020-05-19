@@ -98,7 +98,7 @@ void csv_write_record(struct csv_writer* this, struct csv_record* rec)
                 else
                         fputs(this->_in->buffer, this->_in->file);
         }
-        fputs(this->lineEnding, this->_in->file);
+        fputs(this->line_terminator, this->_in->file);
 }
 
 int csv_writer_reset(struct csv_writer* this)

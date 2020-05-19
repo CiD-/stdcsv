@@ -61,7 +61,7 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                 fputs("Not yet implemented\n", stderr);
                 exit(EXIT_FAILURE);
         case 'f':
-                reader->failsafeMode = TRUE;
+                reader->failsafe_mode = TRUE;
                 //csv_open_temp(writer);
                 break;
         case 'h': /* help */
@@ -123,10 +123,10 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                 STRNCPY(reader->delimiter, optarg, 32);
                 break;
         case 'r': /* no-embedded-nl */
-                STRNCPY(reader->inlineBreak, "", 32);
+                STRNCPY(reader->embedded_break, "", 32);
                 break;
         case 'R': /* replace-newlines */
-                STRNCPY(reader->inlineBreak, optarg, 32);
+                STRNCPY(reader->embedded_break, optarg, 32);
                 break;
         case 'o': /* output-file */
                 if (csv_writer_open(writer, optarg) == CSV_FAIL)
@@ -134,10 +134,10 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                 set_output_file = 1;
                 break;
         case 'W': /* windows-line-ending */
-                STRNCPY(writer->lineEnding, "\r\n", 3);
+                STRNCPY(writer->line_terminator, "\r\n", 3);
                 break;
         case 'M': /* mac-line-ending */
-                STRNCPY(writer->lineEnding, "\r", 3);
+                STRNCPY(writer->line_terminator, "\r", 3);
                 break;
         case '?': /* Should never get here... */
                 exit(EXIT_FAILURE);
@@ -212,10 +212,10 @@ int main (int argc, char **argv)
                         /* If failsafe mode and writer not opened (AKA stdout),
                          * open temp file for writing.
                          */
-                        if (reader->failsafeMode && !csv_writer_isopen(writer))
+                        if (reader->failsafe_mode && !csv_writer_isopen(writer))
                                 csv_writer_mktmp(writer);
 
-                } else if (reader->failsafeMode && ret != CSV_RESET) {
+                } else if (reader->failsafe_mode && ret != CSV_RESET) {
                         fputs("Warning: Failsafe mode does not work with stdin\n", stderr);
                 }
 

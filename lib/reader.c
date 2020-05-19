@@ -19,7 +19,7 @@ struct csv_read_internal {
 
         /* Statistics */
         uint rows;
-        uint inlineBreaks;
+        uint embedded_breaks;
 
         /* Properties */
         int normalOrg;
@@ -80,7 +80,7 @@ struct csv_reader* csv_reader_new()
         *reader = (struct csv_reader) {
                 NULL            /* internal */
                 ,""             /* delimiter */
-                ,"\n"           /* inlineBreak */
+                ,"\n"           /* embedded_break */
                 ,QUOTE_RFC4180  /* quotes */
                 ,0              /* Normal */
                 ,FALSE          /* failsafeMode */
@@ -99,7 +99,7 @@ struct csv_reader* csv_reader_new()
                 ,0     /* fieldsAllocated; */
                 ,0     /* delimLen */
                 ,0     /* rows */
-                ,0     /* inlineBreaks */
+                ,0     /* embedded_breaks */
                 ,0     /* normalOrg */
         };
 
@@ -127,9 +127,9 @@ uint csv_reader_row_count(struct csv_reader* this)
         return this->_in->rows;
 }
 
-uint csv_reader_inline_breaks(struct csv_reader* this)
+uint csv_reader_embedded_breaks(struct csv_reader* this)
 {
-        return this->_in->inlineBreaks;
+        return this->_in->embedded_breaks;
 }
 
 void csv_growrecord(struct csv_reader* this)
@@ -169,18 +169,18 @@ int csv_get_record(struct csv_reader* this, struct csv_record** rec)
 
 int csv_lowerstandard(struct csv_reader* this)
 {
-        if (!this->failsafeMode || this->_in->file == stdin) {
+        if (!this->failsafe_mode || this->_in->file == stdin) {
                 switch(this->quotes) {
                 case QUOTE_ALL:
                 case QUOTE_RFC4180:
                         fprintf(stderr,
                                 "Line %d: RFC4180 Qualifier issue.\n",
-                                1 + this->_in->rows + this->_in->inlineBreaks);
+                                1 + this->_in->rows + this->_in->embedded_breaks);
                         break;
                 case QUOTE_WEAK:
                         fprintf(stderr,
                                 "Line %d: Qualifier issue.\n",
-                                1 + this->_in->rows + this->_in->inlineBreaks);
+                                1 + this->_in->rows + this->_in->embedded_breaks);
                         break;
                 default:
                         fputs("Unexpected Condition.\n", stderr);
@@ -194,12 +194,12 @@ int csv_lowerstandard(struct csv_reader* this)
         case QUOTE_RFC4180:
                 fprintf(stderr,
                         "Line %d: Qualifier issue. RFC4180 quotes disabled.\n",
-                        1 + this->_in->rows + this->_in->inlineBreaks);
+                        1 + this->_in->rows + this->_in->embedded_breaks);
                 break;
         case QUOTE_WEAK:
                 fprintf(stderr,
                         "Line %d: Qualifier issue. Quotes disabled.\n",
-                        1 + this->_in->rows + this->_in->inlineBreaks);
+                        1 + this->_in->rows + this->_in->embedded_breaks);
                 break;
         default:
                 fputs("Unexpected Condition.\n", stderr);
@@ -208,7 +208,7 @@ int csv_lowerstandard(struct csv_reader* this)
 
         --this->quotes;
         this->_in->rows = 0;
-        this->_in->inlineBreaks = 0;
+        this->_in->embedded_breaks = 0;
         fseek(this->_in->file, 0, SEEK_SET);
 
         return CSV_RESET;
@@ -291,7 +291,7 @@ int csv_append_line(struct csv_reader* this, uint nlCount)
                            &this->_in->rawBufferSize,
                            &this->_in->rawLength);
 
-        uint nlLen = strlen(this->inlineBreak);
+        uint nlLen = strlen(this->embedded_break);
         if (this->_in->rawLength + nlLen * nlCount >= this->_in->bufferSize) {
 
                 increase_buffer_to(&this->_in->buffer,
@@ -307,7 +307,7 @@ int csv_append_line(struct csv_reader* this, uint nlCount)
                 }
         }
 
-        strcpy(&this->_in->buffer[this->_in->bufIdx], this->inlineBreak);
+        strcpy(&this->_in->buffer[this->_in->bufIdx], this->embedded_break);
         this->_in->bufIdx += nlLen;
 
         return ret;
@@ -348,7 +348,7 @@ int csv_parse_rfc4180(struct csv_reader* this, const char** line, size_t* lineId
                                 this->_in->buffer[this->_in->bufIdx++] = (*line)[*lineIdx];
 
                         if ((*line)[*lineIdx] == '\n')
-                                ++this->_in->inlineBreaks;
+                                ++this->_in->embedded_breaks;
                 }
                 /** In-line break found **/
                 if ((*line)[*lineIdx] == '\0' && qualified) {
@@ -374,7 +374,7 @@ int csv_parse_rfc4180(struct csv_reader* this, const char** line, size_t* lineId
         if (appendField)
                 csv_append_empty_field(this);
 
-        this->_in->inlineBreaks += nlCount;
+        this->_in->embedded_breaks += nlCount;
         return 0;
 }
 
@@ -405,7 +405,7 @@ int csv_parse_weak(struct csv_reader* this, const char** line, size_t* lineIdx)
                         this->_in->buffer[this->_in->bufIdx++] = (*line)[*lineIdx];
 
                         if ((*line)[*lineIdx] == '\n')
-                                ++this->_in->inlineBreaks;
+                                ++this->_in->embedded_breaks;
                 }
                 if ((*line)[*lineIdx] == '\0' && !onQuote) {
                         if (++nlCount > CSV_MAX_NEWLINES ||
@@ -431,7 +431,7 @@ int csv_parse_weak(struct csv_reader* this, const char** line, size_t* lineIdx)
         if (appendField)
                 csv_append_empty_field(this);
 
-        this->_in->inlineBreaks += nlCount;
+        this->_in->embedded_breaks += nlCount;
         return 0;
 }
 
@@ -449,7 +449,7 @@ int csv_parse_none(struct csv_reader* this, const char** line, size_t* lineIdx)
                 this->_in->buffer[this->_in->bufIdx++] = (*line)[*lineIdx];
 
                 if ((*line)[*lineIdx] == '\n')
-                        ++this->_in->inlineBreaks;
+                        ++this->_in->embedded_breaks;
         }
 
         if (delimIdx == this->_in->delimLen) {
@@ -513,7 +513,7 @@ int csv_reader_reset(struct csv_reader* this)
         this->normal = this->_in->normalOrg;
         this->delimiter[0] = '\0';
         this->_in->delimLen = 0;
-        this->_in->inlineBreaks = 0;
+        this->_in->embedded_breaks = 0;
         this->_in->rows = 0;
         this->_in->buffer[0] = '\0';
         if (this->_in->file && this->_in->file != stdin) {

@@ -48,16 +48,16 @@ struct csv_record {
 struct csv_reader {
         struct csv_read_internal* _in;
         char delimiter[32];
-        char inlineBreak[32];
+        char embedded_break[32];
         int quotes;
         int normal;
-        int failsafeMode;
+        int failsafe_mode;
 };
 
 struct csv_writer {
         struct csv_write_internal* _in;
         char delimiter[32];
-        char lineEnding[3];
+        char line_terminator[3];
         int quotes;
 };
 
@@ -84,7 +84,7 @@ void csv_reader_free(struct csv_reader*);
 
 /** Accessors **/
 uint csv_reader_row_count(struct csv_reader*);
-uint csv_reader_inline_breaks(struct csv_reader*);
+uint csv_reader_embedded_breaks(struct csv_reader*);
 
 /**
  * Main accessing function for reading data.

@@ -170,7 +170,7 @@ START_TEST(test_parse_rfc)
         ck_assert_str_eq(record->fields[3], "");
 
         uint rows = csv_reader_row_count(reader);
-        uint breaks = csv_reader_inline_breaks(reader);
+        uint breaks = csv_reader_embedded_breaks(reader);
 
         ck_assert_uint_eq(rows, 4);
         ck_assert_uint_eq(breaks, 1);
@@ -211,7 +211,7 @@ START_TEST(test_parse_weak)
         ck_assert_str_eq(record->fields[3], "");
 
         uint rows = csv_reader_row_count(reader);
-        uint breaks = csv_reader_inline_breaks(reader);
+        uint breaks = csv_reader_embedded_breaks(reader);
 
         ck_assert_uint_eq(rows, 4);
         ck_assert_uint_eq(breaks, 1);
@@ -252,7 +252,7 @@ START_TEST(test_parse_none)
         ck_assert_str_eq(record->fields[3], "");
 
         uint rows = csv_reader_row_count(reader);
-        uint breaks = csv_reader_inline_breaks(reader);
+        uint breaks = csv_reader_embedded_breaks(reader);
 
         ck_assert_uint_eq(rows, 4);
         ck_assert_uint_eq(breaks, 1);
@@ -292,7 +292,7 @@ START_TEST(test_parse_ldrfc)
         ck_assert_str_eq(record->fields[3], "");
 
         uint rows = csv_reader_row_count(reader);
-        uint breaks = csv_reader_inline_breaks(reader);
+        uint breaks = csv_reader_embedded_breaks(reader);
 
         ck_assert_uint_eq(rows, 4);
         ck_assert_uint_eq(breaks, 1);
@@ -333,7 +333,7 @@ START_TEST(test_parse_ldweak)
         ck_assert_str_eq(record->fields[3], "");
 
         uint rows = csv_reader_row_count(reader);
-        uint breaks = csv_reader_inline_breaks(reader);
+        uint breaks = csv_reader_embedded_breaks(reader);
 
         ck_assert_uint_eq(rows, 4);
         ck_assert_uint_eq(breaks, 1);
@@ -375,7 +375,7 @@ START_TEST(test_parse_ldnone)
         ck_assert_str_eq(record->fields[3], "");
 
         uint rows = csv_reader_row_count(reader);
-        uint breaks = csv_reader_inline_breaks(reader);
+        uint breaks = csv_reader_embedded_breaks(reader);
 
         ck_assert_uint_eq(rows, 4);
         ck_assert_uint_eq(breaks, 1);
@@ -415,7 +415,7 @@ START_TEST(test_file_rfc)
         ck_assert_int_eq(ret, EOF);
 
         uint rows = csv_reader_row_count(reader);
-        uint breaks = csv_reader_inline_breaks(reader);
+        uint breaks = csv_reader_embedded_breaks(reader);
 
         ck_assert_uint_eq(rows, 4);
         ck_assert_uint_eq(breaks, 1);
@@ -456,7 +456,7 @@ START_TEST(test_file_weak)
         ck_assert_int_eq(ret, EOF);
 
         uint rows = csv_reader_row_count(reader);
-        uint breaks = csv_reader_inline_breaks(reader);
+        uint breaks = csv_reader_embedded_breaks(reader);
 
         ck_assert_uint_eq(rows, 4);
         ck_assert_uint_eq(breaks, 1);
@@ -502,7 +502,7 @@ START_TEST(test_file_none)
         ck_assert_int_eq(ret, EOF);
 
         uint rows = csv_reader_row_count(reader);
-        uint breaks = csv_reader_inline_breaks(reader);
+        uint breaks = csv_reader_embedded_breaks(reader);
 
         ck_assert_uint_eq(rows, 5);
         ck_assert_uint_eq(breaks, 0);
@@ -513,7 +513,7 @@ START_TEST(test_multiple_eol)
 {
         int ret = 0;
 
-        reader->failsafeMode = TRUE;
+        reader->failsafe_mode = TRUE;
 
         csv_reader_open(reader, "test_multi_eol.txt");
         ret = csv_get_record(reader, &record);
@@ -528,7 +528,7 @@ START_TEST(test_multiple_eol)
         ck_assert_int_eq(ret, EOF);
 
         uint rows = csv_reader_row_count(reader);
-        uint breaks = csv_reader_inline_breaks(reader);
+        uint breaks = csv_reader_embedded_breaks(reader);
 
         ck_assert_uint_eq(rows, 1);
         ck_assert_uint_eq(breaks, 2);
@@ -539,7 +539,7 @@ START_TEST(test_realloc_append)
 {
         int ret = 0;
 
-        reader->failsafeMode = TRUE;
+        reader->failsafe_mode = TRUE;
 
         csv_reader_open(reader, "test_realloc_append.txt");
         ret = csv_get_record(reader, &record);
@@ -561,7 +561,7 @@ START_TEST(test_realloc_append)
         ck_assert_int_eq(ret, EOF);
 
         uint rows = csv_reader_row_count(reader);
-        uint breaks = csv_reader_inline_breaks(reader);
+        uint breaks = csv_reader_embedded_breaks(reader);
 
         ck_assert_uint_eq(rows, 2);
         ck_assert_uint_eq(breaks, 2);
@@ -572,7 +572,7 @@ START_TEST(test_fs_eof)
 {
         int ret = 0;
 
-        reader->failsafeMode = TRUE;
+        reader->failsafe_mode = TRUE;
 
         csv_reader_open(reader, "test_fs_eof.txt");
         ret = csv_get_record(reader, &record);
@@ -594,7 +594,7 @@ START_TEST(test_fs_max)
 {
         int ret = 0;
 
-        reader->failsafeMode = TRUE;
+        reader->failsafe_mode = TRUE;
 
         csv_reader_open(reader, "test_fs_max.txt");
         ret = csv_get_record(reader, &record);
@@ -618,7 +618,7 @@ START_TEST(test_fs_weak)
 {
         int ret = 0;
 
-        reader->failsafeMode = TRUE;
+        reader->failsafe_mode = TRUE;
 
         csv_reader_open(reader, "test_fs_weak.txt");
         ret = csv_get_record(reader, &record);
