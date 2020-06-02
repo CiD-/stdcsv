@@ -48,7 +48,7 @@ void csv_growrecord(struct csv_reader*);
  * csv_append_line is used to retrieve another line
  * of input for an in-line break.
  */
-int csv_append_line(struct csv_reader* this, uint nlCount);
+int csv_append_line(struct csv_reader* this, size_t lineIdx, uint nlCount);
 
 /**
  * Simple CSV parsing. Disregard all quotes.
@@ -220,6 +220,10 @@ void csv_append_empty_field(struct csv_reader* this)
         if (++(record->size) > this->_in->fieldsAllocated)
                 csv_growrecord(this);
 
+        if (this->_in->bufIdx >= this->_in->bufferSize)
+                increase_buffer(&this->_in->buffer,
+                                &this->_in->bufferSize);
+
         this->_in->buffer[this->_in->bufIdx] = '\0';
         record->fields[record->size-1] = &this->_in->buffer[this->_in->bufIdx];
 }
@@ -234,7 +238,7 @@ struct csv_record* csv_parse(struct csv_reader* this, const char* line)
         if (strlen(line) >= this->_in->bufferSize) {
                 increase_buffer_to(&this->_in->buffer,
                                    &this->_in->bufferSize,
-                                   strlen(line));
+                                   strlen(line)+1);
         }
 
         this->_in->bufIdx = 0;
@@ -284,7 +288,7 @@ struct csv_record* csv_parse(struct csv_reader* this, const char* line)
         return record;
 }
 
-int csv_append_line(struct csv_reader* this, uint nlCount)
+int csv_append_line(struct csv_reader* this, size_t lineIdx, uint nlCount)
 {
         int ret = sappline(this->_in->file,
                            &this->_in->rawBuffer,
@@ -292,11 +296,11 @@ int csv_append_line(struct csv_reader* this, uint nlCount)
                            &this->_in->rawLength);
 
         uint nlLen = strlen(this->embedded_break);
-        if (this->_in->rawLength + nlLen * nlCount >= this->_in->bufferSize) {
-
+        uint delta = this->_in->rawLength - lineIdx + (nlLen+1) * nlCount;
+        if (delta >= this->_in->bufferSize - this->_in->bufIdx) {
                 increase_buffer_to(&this->_in->buffer,
-                                  &this->_in->bufferSize,
-                                  this->_in->rawLength + nlLen * nlCount);
+                                   &this->_in->bufferSize,
+                                   this->_in->bufferSize + delta);
 
                 /* Move all pointers from _record->fields */
                 struct csv_record* rec = this->_in->_record;
@@ -353,7 +357,7 @@ int csv_parse_rfc4180(struct csv_reader* this, const char** line, size_t* lineId
                 /** In-line break found **/
                 if ((*line)[*lineIdx] == '\0' && qualified) {
                         if (++nlCount > CSV_MAX_NEWLINES ||
-                            csv_append_line(this, nlCount) == EOF) {
+                            csv_append_line(this, *lineIdx, nlCount) == EOF) {
                                 return CSV_RESET;
                         }
                         *line = this->_in->rawBuffer;
@@ -409,7 +413,7 @@ int csv_parse_weak(struct csv_reader* this, const char** line, size_t* lineIdx)
                 }
                 if ((*line)[*lineIdx] == '\0' && !onQuote) {
                         if (++nlCount > CSV_MAX_NEWLINES ||
-                            csv_append_line(this, nlCount) == EOF) {
+                            csv_append_line(this, *lineIdx, nlCount) == EOF) {
                                 return CSV_RESET;
                         }
                         *line = this->_in->rawBuffer;

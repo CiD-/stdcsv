@@ -123,10 +123,10 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                 STRNCPY(reader->delimiter, optarg, 32);
                 break;
         case 'r': /* no-embedded-nl */
-                STRNCPY(reader->embedded_break, "", 32);
+                STRNCPY(reader->embedded_break, "", 3);
                 break;
         case 'R': /* replace-newlines */
-                STRNCPY(reader->embedded_break, optarg, 32);
+                STRNCPY(reader->embedded_break, optarg, 3);
                 break;
         case 'o': /* output-file */
                 if (csv_writer_open(writer, optarg) == CSV_FAIL)
