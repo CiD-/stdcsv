@@ -249,17 +249,18 @@ struct csv_record* csv_parse(struct csv_reader* this, const char* line)
         while(line[lineIdx] != '\0') {
                 csv_append_empty_field(this);
 
-                switch(this->quotes) {
+                int quotes = this->quotes;
+                if (this->quotes && line[lineIdx] != '"')
+                        quotes = QUOTE_NONE;
+                switch(quotes) {
                 case QUOTE_ALL:
                         /* Not seeing a point to implementing this for reading. */
                 case QUOTE_RFC4180:
                         ret = csv_parse_rfc4180(this, &line, &lineIdx);
                         break;
                 case QUOTE_WEAK:
-                        if (this->quotes && line[lineIdx] == '"') { /** Implicit Fallthrough **/
-                                ret = csv_parse_weak(this, &line, &lineIdx);
-                                break;
-                        }
+                        ret = csv_parse_weak(this, &line, &lineIdx);
+                        break;
                 case QUOTE_NONE:
                         ret = csv_parse_none(this, &line, &lineIdx);
                         break;
