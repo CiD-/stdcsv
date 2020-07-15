@@ -1,5 +1,6 @@
 stdcsv
 .gdb_history
+.clangd/
 
 # doc files
 Doxyfile

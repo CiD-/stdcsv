@@ -52,6 +52,7 @@ struct csv_reader {
         int quotes;
         int normal;
         int failsafe_mode;
+        int trim;
 };
 
 struct csv_writer {

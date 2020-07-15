@@ -632,20 +632,20 @@ START_TEST(test_fs_weak)
         ck_assert_str_eq(record->fields[2], "ghi");
 }
 
-START_TEST(test_weak_trailing)
-{
-        int ret = 0;
-        reader->quotes = QUOTE_WEAK;
-
-        csv_reader_open(reader, "test_weak_trailing.txt");
-
-        ret = csv_get_record(reader, &record);
-        ck_assert_int_eq(ret, CSV_GOOD);
-        ck_assert_uint_eq(record->size, 3);
-        ck_assert_str_eq(record->fields[0], "abc");
-        ck_assert_str_eq(record->fields[1], "def");
-        ck_assert_str_eq(record->fields[2], "ghi");
-}
+//START_TEST(test_weak_trailing)
+//{
+//        int ret = 0;
+//        reader->quotes = QUOTE_WEAK;
+//
+//        csv_reader_open(reader, "test_weak_trailing.txt");
+//
+//        ret = csv_get_record(reader, &record);
+//        ck_assert_int_eq(ret, CSV_GOOD);
+//        ck_assert_uint_eq(record->size, 3);
+//        ck_assert_str_eq(record->fields[0], "abc");
+//        ck_assert_str_eq(record->fields[1], "def");
+//        ck_assert_str_eq(record->fields[2], "ghi");
+//}
 
 Suite* csv_reader_suite(void)
 {
@@ -731,10 +731,10 @@ Suite* csv_reader_suite(void)
         tcase_add_test(tc_failsafe_weak, test_fs_weak);
         suite_add_tcase(s, tc_failsafe_weak);
 
-        TCase* tc_weak_trailing = tcase_create("failsafe_weak");
-        tcase_add_checked_fixture(tc_weak_trailing, parse_setup, parse_teardown);
-        tcase_add_test(tc_weak_trailing, test_weak_trailing);
-        suite_add_tcase(s, tc_weak_trailing);
+        //TCase* tc_weak_trailing = tcase_create("failsafe_weak");
+        //tcase_add_checked_fixture(tc_weak_trailing, parse_setup, parse_teardown);
+        //tcase_add_test(tc_weak_trailing, test_weak_trailing);
+        //suite_add_tcase(s, tc_weak_trailing);
 
         return s;
 }

@@ -84,6 +84,7 @@ struct csv_reader* csv_reader_new()
                 ,QUOTE_RFC4180  /* quotes */
                 ,0              /* Normal */
                 ,FALSE          /* failsafeMode */
+                ,FALSE
         };
 
         MALLOC(reader->_in, sizeof(*reader->_in));
@@ -321,11 +322,14 @@ int csv_append_line(struct csv_reader* this, size_t lineIdx, uint nlCount)
 int csv_parse_rfc4180(struct csv_reader* this, const char** line, size_t* lineIdx)
 {
         uint delimIdx = 0;
+        uint lastDelimIdx = 0;
         uint qualified = FALSE;
         uint lastWasQuote = FALSE;
+        uint trailingSpace = 0;
         uint nlCount = 0;
         int skip = FALSE;
         int appendField = FALSE;
+        int firstChar = TRUE;
 
         while (TRUE) {
                 for (; (*line)[*lineIdx] != '\0' && delimIdx != this->_in->delimLen; ++(*lineIdx)) {
@@ -349,11 +353,22 @@ int csv_parse_rfc4180(struct csv_reader* this, const char** line, size_t* lineId
                                 lastWasQuote = FALSE;
                         }
 
-                        if (!skip)
-                                this->_in->buffer[this->_in->bufIdx++] = (*line)[*lineIdx];
+                        if (!skip) {
+                                if (!firstChar || !this->trim || !isspace((*line)[*lineIdx])) {
+                                        this->_in->buffer[this->_in->bufIdx++] = (*line)[*lineIdx];
+
+                                        firstChar = FALSE;
+                                        if (this->trim && isspace((*line)[*lineIdx]))
+                                                ++trailingSpace;
+                                        else if (delimIdx == lastDelimIdx) 
+                                                trailingSpace = 0;
+                                }
+                        }
 
                         if ((*line)[*lineIdx] == '\n')
                                 ++this->_in->embedded_breaks;
+
+                        lastDelimIdx = delimIdx;
                 }
                 /** In-line break found **/
                 if ((*line)[*lineIdx] == '\0' && qualified) {
@@ -374,6 +389,8 @@ int csv_parse_rfc4180(struct csv_reader* this, const char** line, size_t* lineId
                         appendField = TRUE;
                 this->_in->bufIdx -= this->_in->delimLen;
         }
+
+        this->_in->bufIdx -= trailingSpace;
         this->_in->buffer[this->_in->bufIdx++] = '\0';
 
         if (appendField)
@@ -386,10 +403,12 @@ int csv_parse_rfc4180(struct csv_reader* this, const char** line, size_t* lineId
 int csv_parse_weak(struct csv_reader* this, const char** line, size_t* lineIdx)
 {
         uint delimIdx = 0;
+        uint lastDelimIdx = 0;
         uint onQuote = FALSE;
         uint trailingSpace = 0;
         int nlCount = 0;
         int appendField = FALSE;
+        int firstChar = TRUE;
 
         ++(*lineIdx);
 
@@ -400,17 +419,27 @@ int csv_parse_weak(struct csv_reader* this, const char** line, size_t* lineIdx)
                         } else {
                                 delimIdx = 0;
                                 /* Handle trailing space after quote */
-                                if (onQuote && isspace((*line)[*lineIdx])) {
-                                        ++trailingSpace;
-                                } else {
-                                        trailingSpace = 0;
+                                //if (onQuote && isspace((*line)[*lineIdx])) {
+                                //        ++trailingSpace;
+                                //} else {
+                                //        trailingSpace = 0;
                                         onQuote = ((*line)[*lineIdx] == '"');
-                                }
+                                //}
                         }
-                        this->_in->buffer[this->_in->bufIdx++] = (*line)[*lineIdx];
+                        if (!firstChar || !this->trim || !isspace((*line)[*lineIdx])) {
+                                this->_in->buffer[this->_in->bufIdx++] = (*line)[*lineIdx];
+
+                                firstChar = FALSE;
+                                if (this->trim && isspace((*line)[*lineIdx]))
+                                        ++trailingSpace;
+                                else if (onQuote + delimIdx == lastDelimIdx) 
+                                        trailingSpace = 0;
+                        }
 
                         if ((*line)[*lineIdx] == '\n')
                                 ++this->_in->embedded_breaks;
+
+                        lastDelimIdx = delimIdx + onQuote;
                 }
                 if ((*line)[*lineIdx] == '\0' && !onQuote) {
                         if (++nlCount > CSV_MAX_NEWLINES ||
@@ -443,7 +472,10 @@ int csv_parse_weak(struct csv_reader* this, const char** line, size_t* lineIdx)
 int csv_parse_none(struct csv_reader* this, const char** line, size_t* lineIdx)
 {
         uint delimIdx = 0;
+        uint lastDelimIdx = 0;
+        uint trailingSpace = 0;
         int appendField = FALSE;
+        int firstChar = TRUE;
 
         for (; (*line)[*lineIdx] != '\0' && delimIdx != this->_in->delimLen; ++(*lineIdx)) {
                 if ((*line)[*lineIdx] == this->delimiter[delimIdx])
@@ -451,10 +483,21 @@ int csv_parse_none(struct csv_reader* this, const char** line, size_t* lineIdx)
                 else if (delimIdx != 0)
                         delimIdx = ((*line)[*lineIdx] == this->delimiter[0]) ? 1 : 0;
 
-                this->_in->buffer[this->_in->bufIdx++] = (*line)[*lineIdx];
+                if (!firstChar || !this->trim || !isspace((*line)[*lineIdx])) {
+                        this->_in->buffer[this->_in->bufIdx++] = (*line)[*lineIdx];
+
+                        firstChar = FALSE;
+                        if (this->trim && isspace((*line)[*lineIdx]))
+                                ++trailingSpace;
+                        else if (delimIdx == lastDelimIdx) 
+                                trailingSpace = 0;
+                }
+
 
                 if ((*line)[*lineIdx] == '\n')
                         ++this->_in->embedded_breaks;
+
+                lastDelimIdx = delimIdx;
         }
 
         if (delimIdx == this->_in->delimLen) {
@@ -463,6 +506,8 @@ int csv_parse_none(struct csv_reader* this, const char** line, size_t* lineIdx)
                         appendField = TRUE;
                 this->_in->bufIdx -= this->_in->delimLen;
         }
+        
+        this->_in->bufIdx -= trailingSpace;
         this->_in->buffer[this->_in->bufIdx++] = '\0';
 
         if (appendField)

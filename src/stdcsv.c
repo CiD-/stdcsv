@@ -25,6 +25,7 @@ static const char* helpString =
 "\n                          Options: NONE, WEAK, RFC4180, ALL (details below)"
 "\n-r|--no-embedded-nl       Remove embedded new lines."
 "\n-R|--replace-newline arg  Specify a string to replace embedded new lines."
+"\n-t|--trim                 Trim white space from read fields."
 //"\n-v|--verbose              More detailed output."
 "\n-W|--crlf                 Output will have Windows line endings."
 "\n"
@@ -128,6 +129,9 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
         case 'R': /* replace-newlines */
                 STRNCPY(reader->embedded_break, optarg, 3);
                 break;
+        case 't': /* trim */
+                reader->trim = TRUE;
+                break;
         case 'o': /* output-file */
                 if (csv_writer_open(writer, optarg) == CSV_FAIL)
                         csv_perror_exit();
@@ -169,6 +173,7 @@ int main (int argc, char **argv)
                 {"output-file", required_argument, 0, 'o'},
                 {"concat", no_argument, 0, 'c'},
                 {"concat-all", no_argument, 0, 'C'},
+                {"trim", no_argument, 0, 't'},
                 {"crlf", no_argument, 0, 'W'},
                 {"cr", no_argument, 0, 'M' },
                 {0, 0, 0, 0}
@@ -180,7 +185,7 @@ int main (int argc, char **argv)
         csv_writer* writer = csv_writer_new();
         csv_record* record = NULL;
 
-        while ( (c = getopt_long (argc, argv, "cCfhMnirWd:D:N:o:Q:q:R:",
+        while ( (c = getopt_long (argc, argv, "cCfhMnirtWd:D:N:o:Q:q:R:",
                                   long_options, &option_index)) != -1)
                 parseargs(c, reader, writer);
 
