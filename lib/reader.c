@@ -397,7 +397,7 @@ int csv_parse_rfc4180(struct csv_reader* this, const char** line, size_t* lineId
                 csv_append_empty_field(this);
 
         this->_in->embedded_breaks += nlCount;
-        return 0;
+        return CSV_GOOD;
 }
 
 int csv_parse_weak(struct csv_reader* this, const char** line, size_t* lineIdx)
@@ -466,7 +466,7 @@ int csv_parse_weak(struct csv_reader* this, const char** line, size_t* lineIdx)
                 csv_append_empty_field(this);
 
         this->_in->embedded_breaks += nlCount;
-        return 0;
+        return CSV_GOOD;
 }
 
 int csv_parse_none(struct csv_reader* this, const char** line, size_t* lineIdx)
@@ -513,7 +513,7 @@ int csv_parse_none(struct csv_reader* this, const char** line, size_t* lineIdx)
         if (appendField)
                 csv_append_empty_field(this);
 
-        return 0;
+        return CSV_GOOD;
 }
 
 void csv_determine_delimiter(struct csv_reader* this, const char* header)
@@ -546,7 +546,7 @@ int csv_reader_open(struct csv_reader* this, const char* fileName)
 {
         this->_in->file = fopen(fileName, "r");
         FAIL_IF(!this->_in->file, fileName);
-        return 0;
+        return CSV_GOOD;
 }
 
 int csv_reader_close(struct csv_reader* this)
@@ -555,7 +555,7 @@ int csv_reader_close(struct csv_reader* this)
                 int ret = fclose(this->_in->file);
                 FAIL_IF(ret, "fclose");
         }
-        return 0;
+        return CSV_GOOD;
 }
 
 int csv_reader_reset(struct csv_reader* this)
@@ -570,5 +570,5 @@ int csv_reader_reset(struct csv_reader* this)
                 int ret = fseek(this->_in->file, 0, SEEK_SET);
                 FAIL_IF(ret, "fseek");
         }
-        return 0;
+        return CSV_GOOD;
 }

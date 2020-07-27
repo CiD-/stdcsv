@@ -69,6 +69,18 @@ void csv_perror();
 void csv_perror_exit();
 
 /**
+ * The method is only to be used on a 
+ * struct csv_record* generated from
+ * csv_record_import.
+ */
+void csv_record_free(struct csv_record* rec);
+
+/**
+ * Export a newly allocated copy
+ */
+struct csv_record* csv_record_export(struct csv_record*);
+
+/**
  * CSV Reader
  */
 
