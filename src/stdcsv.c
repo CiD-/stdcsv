@@ -20,6 +20,7 @@ static const char* helpString =
 "\n-N|--num-fields arg       Specify number of output fields (Implies -n)"
 "\n-o|--output-file arg      Specify an output file. Default is stdout."
 "\n                          Note: This implies concatenation"
+"\n-x|--quotes arg           Specify quoting rules for input and output."
 "\n-Q|--out-quotes arg       Specify quoting rule set for output."
 "\n-q|--in-quotes arg        Specify quoting rule set for input."
 "\n                          Options: NONE, WEAK, RFC4180, ALL (details below)"
@@ -82,6 +83,31 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                 break;
         case 'i': /* in-place-edit */
                 in_place_edit = TRUE;
+                break;
+        case 'x': /* quotes */
+                if(!strcasecmp(optarg, "ALL")) { 
+                        writer->quotes = QUOTE_ALL;
+                        reader->quotes = QUOTE_ALL;
+                }
+                else if (!strcasecmp(optarg, "WEAK")) {
+                        writer->quotes = QUOTE_WEAK;
+                        reader->quotes = QUOTE_WEAK;
+                }
+                else if (!strcasecmp(optarg, "NONE")) { 
+                        writer->quotes = QUOTE_NONE;
+                        reader->quotes = QUOTE_NONE;
+                }
+                else if (!strcasecmp(optarg, "RFC4180")) { 
+                        writer->quotes = QUOTE_RFC4180;
+                        reader->quotes = QUOTE_RFC4180;
+                }
+                else {
+                        fprintf(stderr
+                                ,"Invalid quote option: %s\n"
+                                 "Options: NONE, WEAK, RFC4180, ALL\n"
+                                , optarg);
+                        exit(EXIT_FAILURE);
+                }
                 break;
         case 'Q': /* out-quotes */
                 if(!strcasecmp(optarg, "ALL"))
@@ -164,6 +190,7 @@ int main (int argc, char **argv)
                 {"num-fields", required_argument, 0, 'N'},
                 {"failsafe", no_argument, 0, 'f'},
                 {"in-place-edit", no_argument, 0, 'i'},
+                {"quotes", required_argument, 0, 'x'},
                 {"out-quotes", required_argument, 0, 'Q'},
                 {"in-quotes", required_argument, 0, 'q'},
                 {"out-delimiter", required_argument, 0, 'd'},
@@ -185,7 +212,7 @@ int main (int argc, char **argv)
         csv_writer* writer = csv_writer_new();
         csv_record* record = NULL;
 
-        while ( (c = getopt_long (argc, argv, "cCfhMnirtWd:D:N:o:Q:q:R:",
+        while ( (c = getopt_long (argc, argv, "cCfhMnirtWd:D:N:o:Q:q:R:x:",
                                   long_options, &option_index)) != -1)
                 parseargs(c, reader, writer);
 
