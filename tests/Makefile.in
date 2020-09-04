@@ -104,7 +104,9 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am_check_libcsv_OBJECTS = check_libcsv-check_libcsv.$(OBJEXT)
 check_libcsv_OBJECTS = $(am_check_libcsv_OBJECTS)
-check_libcsv_DEPENDENCIES = $(top_builddir)/lib/libcsv.la
+am__DEPENDENCIES_1 =
+check_libcsv_DEPENDENCIES = $(top_builddir)/lib/libcsv.la \
+	$(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -392,6 +394,8 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CHECK_CFLAGS = @CHECK_CFLAGS@
+CHECK_LIBS = @CHECK_LIBS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -467,8 +471,6 @@ build_cpu = @build_cpu@
 build_os = @build_os@
 build_vendor = @build_vendor@
 builddir = @builddir@
-check_CFLAGS = @check_CFLAGS@
-check_LIBS = @check_LIBS@
 datadir = @datadir@
 datarootdir = @datarootdir@
 docdir = @docdir@
@@ -504,8 +506,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 check_libcsv_SOURCES = check_libcsv.c $(top_builddir)/lib/include/util.h $(top_builddir)/lib/include/safegetline.h $(top_builddir)/lib/include/csv.h
-check_libcsv_CFLAGS = @CHECK_CFLAGS@
-check_libcsv_LDADD = $(top_builddir)/lib/libcsv.la @CHECK_LIBS@
+check_libcsv_CFLAGS = $(CHECK_CFLAGS)
+check_libcsv_LDADD = $(top_builddir)/lib/libcsv.la $(CHECK_LIBS)
 all: all-am
 
 .SUFFIXES:
