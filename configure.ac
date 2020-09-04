@@ -15,7 +15,7 @@ AC_ARG_WITH([check],
     AS_HELP_STRING([--without-check], [Ignore presence of check and disable it]))
 
 AS_IF([test "x$with_check" != "xno"],
-      [PKG_CHECK_MODULES([CHECK], [check >= 0.12.0], [have_check=yes], [have_check=no])],
+      [PKG_CHECK_MODULES([check], [check >= 0.10.0], [have_check=yes], [have_check=no])],
       [have_check=no])
 
 AS_IF([test "x$have_check" = "xyes"],

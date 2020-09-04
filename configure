@@ -635,8 +635,8 @@ LIBOBJS
 HAVE_DOXYGEN_FALSE
 HAVE_DOXYGEN_TRUE
 DOXYGEN
-CHECK_LIBS
-CHECK_CFLAGS
+check_LIBS
+check_CFLAGS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
@@ -733,6 +733,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -781,8 +782,8 @@ CPP
 PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
-CHECK_CFLAGS
-CHECK_LIBS'
+check_CFLAGS
+check_LIBS'
 
 
 # Initialize some variables set by options.
@@ -821,6 +822,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1073,6 +1075,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1210,7 +1221,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1363,6 +1374,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1442,9 +1454,9 @@ Some influential environment variables:
               directories to add to pkg-config's search path
   PKG_CONFIG_LIBDIR
               path overriding pkg-config's built-in search path
-  CHECK_CFLAGS
-              C compiler flags for CHECK, overriding pkg-config
-  CHECK_LIBS  linker flags for CHECK, overriding pkg-config
+  check_CFLAGS
+              C compiler flags for check, overriding pkg-config
+  check_LIBS  linker flags for check, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -12890,19 +12902,19 @@ fi
 if test "x$with_check" != "xno"; then :
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for CHECK" >&5
-$as_echo_n "checking for CHECK... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for check" >&5
+$as_echo_n "checking for check... " >&6; }
 
-if test -n "$CHECK_CFLAGS"; then
-    pkg_cv_CHECK_CFLAGS="$CHECK_CFLAGS"
+if test -n "$check_CFLAGS"; then
+    pkg_cv_check_CFLAGS="$check_CFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"check >= 0.12.0\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "check >= 0.12.0") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"check >= 0.10.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "check >= 0.10.0") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_CHECK_CFLAGS=`$PKG_CONFIG --cflags "check >= 0.12.0" 2>/dev/null`
+  pkg_cv_check_CFLAGS=`$PKG_CONFIG --cflags "check >= 0.10.0" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -12910,16 +12922,16 @@ fi
  else
     pkg_failed=untried
 fi
-if test -n "$CHECK_LIBS"; then
-    pkg_cv_CHECK_LIBS="$CHECK_LIBS"
+if test -n "$check_LIBS"; then
+    pkg_cv_check_LIBS="$check_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"check >= 0.12.0\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "check >= 0.12.0") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"check >= 0.10.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "check >= 0.10.0") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_CHECK_LIBS=`$PKG_CONFIG --libs "check >= 0.12.0" 2>/dev/null`
+  pkg_cv_check_LIBS=`$PKG_CONFIG --libs "check >= 0.10.0" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -12940,12 +12952,12 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        CHECK_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "check >= 0.12.0" 2>&1`
+	        check_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "check >= 0.10.0" 2>&1`
         else
-	        CHECK_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "check >= 0.12.0" 2>&1`
+	        check_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "check >= 0.10.0" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
-	echo "$CHECK_PKG_ERRORS" >&5
+	echo "$check_PKG_ERRORS" >&5
 
 	have_check=no
 elif test $pkg_failed = untried; then
@@ -12953,8 +12965,8 @@ elif test $pkg_failed = untried; then
 $as_echo "no" >&6; }
 	have_check=no
 else
-	CHECK_CFLAGS=$pkg_cv_CHECK_CFLAGS
-	CHECK_LIBS=$pkg_cv_CHECK_LIBS
+	check_CFLAGS=$pkg_cv_check_CFLAGS
+	check_LIBS=$pkg_cv_check_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 	have_check=yes
@@ -14736,9 +14748,7 @@ $as_echo X/"$am_mf" |
     { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "Something went wrong bootstrapping makefile fragments
-    for automatic dependency tracking.  If GNU make was not used, consider
-    re-running the configure script with MAKE=\"gmake\" (or whatever is
-    necessary).  You can also try re-running configure with the
+    for automatic dependency tracking.  Try re-running configure with the
     '--disable-dependency-tracking' option to at least be able to build
     the package (albeit without support for automatic dependency tracking).
 See \`config.log' for more details" "$LINENO" 5; }
