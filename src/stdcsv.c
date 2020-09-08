@@ -210,7 +210,7 @@ int main (int argc, char **argv)
 
         csv_reader* reader = csv_reader_new();
         csv_writer* writer = csv_writer_new();
-        csv_record* record = NULL;
+        csv_record* record = csv_record_new();
 
         while ( (c = getopt_long (argc, argv, "cCfhMnirtWd:D:N:o:Q:q:R:x:",
                                   long_options, &option_index)) != -1)
@@ -252,7 +252,7 @@ int main (int argc, char **argv)
                 }
 
                 /* Hot loop */
-                while ((ret = csv_get_record(reader, &record)) == CSV_GOOD)
+                while ((ret = csv_get_record(reader, record)) == CSV_GOOD)
                         csv_write_record(writer, record);
 
                 /* Post process */
@@ -273,6 +273,7 @@ int main (int argc, char **argv)
 
         csv_reader_free(reader);
         csv_writer_free(writer);
+        csv_record_free(record);
 
         if (ret != CSV_FAIL)
                 return 0;

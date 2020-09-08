@@ -31,11 +31,13 @@ extern "C" {
  */
 
 /* Forward declaration of internal structures */
+struct csv_internal;
 struct csv_read_internal;
 struct csv_write_internal;
 
 /* Structure containing dynamic array of fields */
 struct csv_record {
+        struct csv_internal* _in;
         char** fields;
         int size;
 };
@@ -69,16 +71,18 @@ void csv_perror();
 void csv_perror_exit();
 
 /**
- * The method is only to be used on a 
- * struct csv_record* generated from
- * csv_record_import.
+ */
+struct csv_record* csv_record_new();
+
+/**
  */
 void csv_record_free(struct csv_record* rec);
 
 /**
- * Export a newly allocated copy
+ * Clone the fields of a csv_record and
+ * clone the individual fields themselves.
  */
-struct csv_record* csv_record_export(struct csv_record*);
+struct csv_record* csv_record_clone(struct csv_record*);
 
 /**
  * CSV Reader
@@ -102,7 +106,7 @@ uint csv_reader_embedded_breaks(struct csv_reader*);
 /**
  * Main accessing function for reading data.
  */
-int csv_get_record(struct csv_reader*, struct csv_record**);
+int csv_get_record(struct csv_reader*, struct csv_record*);
 
 /**
  * Reset statistics. If their is an associated file
@@ -128,7 +132,7 @@ int csv_reader_close(struct csv_reader*);
  * a single record. This will not treat new lines as a
  * record separator.
  */
-struct csv_record* csv_parse(struct csv_reader*, const char* line);
+int csv_parse(struct csv_reader*, struct csv_record*, const char* line);
 
 
 
