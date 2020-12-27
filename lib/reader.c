@@ -140,6 +140,21 @@ void csv_record_grow(struct csv_record* this)
 
 int csv_get_record(struct csv_reader* this, struct csv_record* rec)
 {
+        return csv_nget_record(this, rec, UINT_MAX);
+}
+
+int csv_nget_record(struct csv_reader* this, struct csv_record* rec, unsigned char_limit)
+{
+        return csv_nget_record_to(this, rec, char_limit, UINT_MAX);
+}
+
+int csv_get_record_to(struct csv_reader* this, struct csv_record* rec, unsigned field_limit)
+{
+        return csv_nget_record_to(this, rec, UINT_MAX, field_limit);
+}
+
+int csv_nget_record_to(struct csv_reader* this, struct csv_record* rec, unsigned char_limit, unsigned field_limit)
+{
         int ret = sgetline(this->_in->file,
                            &this->_in->buffer,
                            &this->_in->bufsize,
@@ -152,7 +167,7 @@ int csv_get_record(struct csv_reader* this, struct csv_record* rec)
                 return ret;
         }
 
-        return csv_parse(this, rec, this->_in->buffer);
+        return csv_nparse_to(this, rec, this->_in->buffer, char_limit, field_limit);
 }
 
 int csv_lowerstandard(struct csv_reader* this)
@@ -215,8 +230,23 @@ void csv_append_empty_field(struct csv_record* this)
         this->fields[this->size-1] = &this->_in->buffer[this->_in->bufidx];
 }
 
-int 
-csv_parse(struct csv_reader *this, struct csv_record *rec, const char* line)
+
+int csv_parse(struct csv_reader *this, struct csv_record *rec, const char* line)
+{
+        return csv_nparse_to(this, rec, line, UINT_MAX, UINT_MAX);
+}
+
+int csv_nparse(struct csv_reader *this, struct csv_record *rec, const char* line, unsigned char_limit)
+{
+        return csv_nparse_to(this, rec, line, char_limit, UINT_MAX);
+}
+
+int csv_parse_to(struct csv_reader *this, struct csv_record *rec, const char* line, unsigned field_limit)
+{
+        return csv_nparse_to(this, rec, line, UINT_MAX, field_limit);
+}
+
+int csv_nparse_to(struct csv_reader *this, struct csv_record *rec, const char* line, unsigned char_limit, unsigned field_limit)
 {
         if (!this->_in->delimLen)
                 csv_determine_delimiter(this, line);
@@ -232,7 +262,7 @@ csv_parse(struct csv_reader *this, struct csv_record *rec, const char* line)
 
         rec->size = 0;
         int ret = 0;
-        while(line[lineIdx] != '\0') {
+        while(line[lineIdx] != '\0' && lineIdx < char_limit && rec->size < field_limit) {
                 csv_append_empty_field(rec);
 
                 int quotes = this->quotes;

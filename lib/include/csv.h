@@ -107,6 +107,9 @@ uint csv_reader_embedded_breaks(struct csv_reader*);
  * Main accessing function for reading data.
  */
 int csv_get_record(struct csv_reader*, struct csv_record*);
+int csv_nget_record(struct csv_reader*, struct csv_record*, unsigned char_limit);
+int csv_get_record_to(struct csv_reader*, struct csv_record*, unsigned field_limit);
+int csv_nget_record_to(struct csv_reader*, struct csv_record*, unsigned char_limit, unsigned field_limit);
 
 /**
  * Reset statistics. If their is an associated file
@@ -132,7 +135,10 @@ int csv_reader_close(struct csv_reader*);
  * a single record. This will not treat new lines as a
  * record separator.
  */
-int csv_parse(struct csv_reader*, struct csv_record*, const char* line);
+int csv_parse(struct csv_reader*, struct csv_record*, const char*);
+int csv_nparse(struct csv_reader*, struct csv_record*, const char*, unsigned char_limit);
+int csv_parse_to(struct csv_reader*, struct csv_record*, const char*, unsigned field_limit);
+int csv_nparse_to(struct csv_reader*, struct csv_record*, const char*, unsigned char_limit, unsigned field_limit);
 
 
 
