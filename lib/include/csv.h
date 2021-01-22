@@ -77,6 +77,7 @@ struct csv_record* csv_record_new();
 /**
  */
 void csv_record_free(struct csv_record* rec);
+void csv_record_free_not_fields(struct csv_record* rec);
 
 /**
  * Clone the fields of a csv_record and

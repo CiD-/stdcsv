@@ -36,7 +36,7 @@ struct csv_record* csv_record_new()
                 NULL,
                 0,
                 0,
-                0               
+                0
         };
 
         increase_buffer(&new_rec->_in->buffer, &new_rec->_in->bufferSize);
@@ -55,6 +55,20 @@ void csv_record_free(struct csv_record* this)
                 FREE(this->_in);
         }
         FREE(this->fields);
+        FREE(this);
+}
+
+void csv_record_free_not_fields(struct csv_record* this)
+{
+        int i = 0;
+        if (this->_in == NULL) { /* Was cloned */
+                for (; i < this->size; ++i)
+                        FREE(this->fields[i]);
+        } else {
+                FREE(this->_in->buffer);
+                FREE(this->_in);
+        }
+        //FREE(this->fields);
         FREE(this);
 }
 
