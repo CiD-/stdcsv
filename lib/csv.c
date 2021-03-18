@@ -27,17 +27,19 @@ struct csv_record* csv_record_new()
         malloc_(new_rec, sizeof(*new_rec));
 
         *new_rec = (struct csv_record) {
-                NULL,
-                NULL,
-                0
+                NULL,   /* _in */
+                NULL,   /* fields */
+                0,      /* raw */
+                0,      /* raw_len */
+                0,      /* size */
         };
 
         malloc_(new_rec->_in, sizeof(*new_rec->_in));
         *new_rec->_in = (struct csv_internal) {
-                NULL,
-                0,
-                0,
-                0
+                NULL,   /* buffer */
+                0,      /* bufIdx */
+                0,      /* bufferSize */
+                0       /* fieldsAllocated */
         };
 
         increase_buffer(&new_rec->_in->buffer, &new_rec->_in->bufferSize);
@@ -79,10 +81,11 @@ struct csv_record* csv_record_clone(struct csv_record* rec)
         malloc_(new_rec, sizeof(*new_rec));
 
         *new_rec = (struct csv_record) {
-                NULL,
-                NULL,
-                NULL,
-                rec->size
+                NULL,           /* _in */
+                NULL,           /* fields */
+                0,              /* raw */
+                0,              /* raw_len */
+                rec->size,      /* size */
         };
 
         malloc_(new_rec->fields, rec->size * sizeof(char*));
