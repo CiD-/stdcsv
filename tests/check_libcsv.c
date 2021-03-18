@@ -1,7 +1,8 @@
 #include <check.h>
 #include <stdlib.h>
 #include "../lib/include/csv.h"
-#include "../lib/include/safegetline.h"
+#include "../lib/safegetline.h"
+#include "../lib/misc.h"
 
 char* buf = NULL;
 size_t buflen = 0;
@@ -516,7 +517,7 @@ START_TEST(test_multiple_eol)
 {
         int ret = 0;
 
-        reader->failsafe_mode = TRUE;
+        reader->failsafe_mode = 1;
 
         csv_reader_open(reader, "test_multi_eol.txt");
         ret = csv_get_record(reader, record);
@@ -541,7 +542,7 @@ START_TEST(test_realloc_append)
 {
         int ret = 0;
 
-        reader->failsafe_mode = TRUE;
+        reader->failsafe_mode = 1;
 
         csv_reader_open(reader, "test_realloc_append.txt");
         ret = csv_get_record(reader, record);
@@ -573,7 +574,7 @@ START_TEST(test_fs_eof)
 {
         int ret = 0;
 
-        reader->failsafe_mode = TRUE;
+        reader->failsafe_mode = 1;
 
         csv_reader_open(reader, "test_fs_eof.txt");
         ret = csv_get_record(reader, record);
@@ -594,7 +595,7 @@ START_TEST(test_fs_max)
 {
         int ret = 0;
 
-        reader->failsafe_mode = TRUE;
+        reader->failsafe_mode = 1;
 
         csv_reader_open(reader, "test_fs_max.txt");
         ret = csv_get_record(reader, record);
@@ -618,7 +619,7 @@ START_TEST(test_fs_weak)
 {
         int ret = 0;
 
-        reader->failsafe_mode = TRUE;
+        reader->failsafe_mode = 1;
 
         csv_reader_open(reader, "test_fs_weak.txt");
         ret = csv_get_record(reader, record);

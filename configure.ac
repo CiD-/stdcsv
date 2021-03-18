@@ -8,7 +8,7 @@ AM_PROG_AR
 LT_INIT
 AC_PROG_CC
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile lib/Makefile src/Makefile lib/docs/Makefile])
+AC_CONFIG_FILES([Makefile lib/util/Makefile lib/Makefile src/Makefile lib/docs/Makefile])
 
 # Check
 AC_ARG_WITH([check],

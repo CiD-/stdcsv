@@ -1,6 +1,9 @@
-#include "util.h"
-#include "safegetline.h"
 #include "csv.h"
+#include "csvsignal.h"
+#include "csverror.h"
+#include "safegetline.h"
+#include "misc.h"
+#include "util.h"
 
 /**
  * Internal Structure
@@ -38,7 +41,7 @@ struct csv_internal {
  * these delimiters are found, use comma. If this->delimiter was set
  * externally, simply update this->_in->delimLen and return.
  */
-void csv_determine_delimiter(struct csv_reader*, const char* header);
+void csv_determine_delimiter(struct csv_reader*, const char* header, unsigned char_limit);
 
 /**
  * csv_record_grow allocates space for the fields
@@ -55,7 +58,7 @@ int csv_append_line(struct csv_reader* this, struct csv_record *rec, size_t line
 /**
  * Simple CSV parsing. Disregard all quotes.
  */
-int csv_parse_none(struct csv_reader*, struct csv_record* rec, const char** line, size_t* lineIdx);
+int csv_parse_none(struct csv_reader*, struct csv_record* rec, const char** line, size_t* lineIdx, unsigned char_limit);
 
 /**
  * Parse line respecting quotes. Quotes within
@@ -63,13 +66,13 @@ int csv_parse_none(struct csv_reader*, struct csv_record* rec, const char** line
  * Leading spaces will cause the field to not
  * be treated as qualified.
  */
-int csv_parse_weak(struct csv_reader*, struct csv_record* rec, const char** line, size_t* lineIdx);
+int csv_parse_weak(struct csv_reader*, struct csv_record* rec, const char** line, size_t* lineIdx, unsigned char_limit);
 
 /**
  * Parse line according to RFC-4180 guidelines.
  * More info: https://tools.ietf.org/html/rfc4180
  */
-int csv_parse_rfc4180(struct csv_reader* this, struct csv_record* rec, const char** line, size_t* lineIdx);
+int csv_parse_rfc4180(struct csv_reader* this, struct csv_record* rec, const char** line, size_t* lineIdx, unsigned char_limit);
 
 
 struct csv_reader* csv_reader_new()
@@ -78,18 +81,18 @@ struct csv_reader* csv_reader_new()
 
         struct csv_reader* reader = NULL;
 
-        MALLOC(reader, sizeof(*reader));
+        malloc_(reader, sizeof(*reader));
         *reader = (struct csv_reader) {
                  NULL           /* internal */
                 ,""             /* delimiter */
                 ,"\n"           /* embedded_break */
                 ,QUOTE_RFC4180  /* quotes */
                 ,0              /* Normal */
-                ,FALSE          /* failsafeMode */
-                ,FALSE
+                ,false          /* failsafeMode */
+                ,false
         };
 
-        MALLOC(reader->_in, sizeof(*reader->_in));
+        malloc_(reader->_in, sizeof(*reader->_in));
         *reader->_in = (struct csv_read_internal) {
                  stdin /* file */
                 ,NULL  /* buffer */
@@ -102,16 +105,16 @@ struct csv_reader* csv_reader_new()
         };
 
         //increase_buffer(&reader->_in->buffer, &reader->_in->bufsize);
-        //MALLOC(reader->_in->_record, sizeof(struct csv_record));
+        //malloc_(reader->_in->_record, sizeof(struct csv_record));
 
         return reader;
 }
 
 void csv_reader_free(struct csv_reader* this)
 {
-        FREE(this->_in->buffer);
-        FREE(this->_in);
-        FREE(this);
+        free_(this->_in->buffer);
+        free_(this->_in);
+        free_(this);
 }
 
 /**
@@ -132,9 +135,9 @@ void csv_record_grow(struct csv_record* this)
         ++this->_in->allocated;
         uint arraySize = this->_in->allocated * sizeof(char*);
         if (this->_in->allocated > 1) {
-                REALLOC(this->fields, arraySize);
+                realloc_(this->fields, arraySize);
         } else {
-                MALLOC(this->fields, arraySize);
+                malloc_(this->fields, arraySize);
         }
 }
 
@@ -249,19 +252,23 @@ int csv_parse_to(struct csv_reader *this, struct csv_record *rec, const char* li
 int csv_nparse_to(struct csv_reader *this, struct csv_record *rec, const char* line, unsigned char_limit, unsigned field_limit)
 {
         if (!this->_in->delimLen)
-                csv_determine_delimiter(this, line);
+                csv_determine_delimiter(this, line, char_limit);
 
-        if (strlen(line) >= rec->_in->bufsize) {
+        unsigned line_len = (char_limit == UINT_MAX) ? strlen(line) : char_limit;
+
+        if (line_len >= rec->_in->bufsize) {
                 increase_buffer_to(&rec->_in->buffer,
                                    &rec->_in->bufsize,
-                                   strlen(line)+1);
+                                   line_len+1);
         }
 
         rec->_in->bufidx = 0;
-        size_t lineIdx = 0;
-
         rec->size = 0;
+        rec->raw = NULL;
+        rec->raw_len = 0;
+        size_t lineIdx = 0;
         int ret = 0;
+
         while(line[lineIdx] != '\0' && lineIdx < char_limit && rec->size < field_limit) {
                 csv_append_empty_field(rec);
 
@@ -272,22 +279,25 @@ int csv_nparse_to(struct csv_reader *this, struct csv_record *rec, const char* l
                 case QUOTE_ALL:
                         /* Not seeing a point to implementing this for reading. */
                 case QUOTE_RFC4180:
-                        ret = csv_parse_rfc4180(this, rec, &line, &lineIdx);
+                        ret = csv_parse_rfc4180(this, rec, &line, &lineIdx, char_limit);
                         break;
                 case QUOTE_WEAK:
-                        ret = csv_parse_weak(this, rec, &line, &lineIdx);
+                        ret = csv_parse_weak(this, rec, &line, &lineIdx, char_limit);
                         break;
                 case QUOTE_NONE:
-                        ret = csv_parse_none(this, rec, &line, &lineIdx);
+                        ret = csv_parse_none(this, rec, &line, &lineIdx, char_limit);
                         break;
                 }
 
                 if (ret == CSV_RESET) {
                         ret = csv_lowerstandard(this);
                         csv_reader_reset(this);
-                        return ret; 
+                        return ret;
                 }
         }
+
+        rec->raw = line; 
+        rec->raw_len = line_len;
 
         if (this->normal > 0) {
                 /* Append fields if we are short */
@@ -300,6 +310,8 @@ int csv_nparse_to(struct csv_reader *this, struct csv_record *rec, const char* l
                 this->normal = rec->_in->allocated;
 
         ++this->_in->rows;
+
+
 
         return 0;
 }
@@ -332,26 +344,26 @@ int csv_append_line(struct csv_reader* this, struct csv_record *rec, size_t line
         return ret;
 }
 
-int csv_parse_rfc4180(struct csv_reader* this, struct csv_record* rec, const char** line, size_t* lineIdx)
+int csv_parse_rfc4180(struct csv_reader* this, struct csv_record* rec, const char** line, size_t* lineIdx, unsigned char_limit)
 {
         uint delimIdx = 0;
         uint lastDelimIdx = 0;
-        uint qualified = FALSE;
-        uint lastWasQuote = FALSE;
+        uint qualified = false;
+        uint lastWasQuote = false;
         uint trailingSpace = 0;
         uint nlCount = 0;
-        int skip = FALSE;
-        int appendField = FALSE;
-        int firstChar = TRUE;
+        int skip = false;
+        int appendField = false;
+        int firstChar = true;
 
-        while (TRUE) {
-                for (; (*line)[*lineIdx] != '\0' && delimIdx != this->_in->delimLen; ++(*lineIdx)) {
-                        skip = FALSE;
+        while (true) {
+                for (; *lineIdx < char_limit && (*line)[*lineIdx] != '\0' && delimIdx != this->_in->delimLen; ++(*lineIdx)) {
+                        skip = false;
                         if (qualified) {
                                 qualified = ((*line)[*lineIdx] != '"');
                                 if (!qualified) {
-                                        skip = TRUE;
-                                        lastWasQuote = TRUE;
+                                        skip = true;
+                                        lastWasQuote = true;
                                 }
                         } else {
                                 if ((*line)[*lineIdx] == this->delimiter[delimIdx])
@@ -361,16 +373,16 @@ int csv_parse_rfc4180(struct csv_reader* this, struct csv_record* rec, const cha
 
                                 if ( (qualified = ((*line)[*lineIdx] == '"') ) ) {
                                         if (!lastWasQuote)
-                                                skip = TRUE;
+                                                skip = true;
                                 }
-                                lastWasQuote = FALSE;
+                                lastWasQuote = false;
                         }
 
                         if (!skip) {
                                 if (!firstChar || !this->trim || !isspace((*line)[*lineIdx])) {
                                         rec->_in->buffer[rec->_in->bufidx++] = (*line)[*lineIdx];
 
-                                        firstChar = FALSE;
+                                        firstChar = false;
                                         if (this->trim && isspace((*line)[*lineIdx]))
                                                 ++trailingSpace;
                                         else if (delimIdx == lastDelimIdx)
@@ -398,8 +410,8 @@ int csv_parse_rfc4180(struct csv_reader* this, struct csv_record* rec, const cha
 
         if (delimIdx == this->_in->delimLen) {
                 /* Handle Trailing delimiter */
-                if (!((*line)[*lineIdx]))
-                        appendField = TRUE;
+                if (!((*line)[*lineIdx]) || *lineIdx == char_limit)
+                        appendField = true;
                 rec->_in->bufidx -= this->_in->delimLen;
         }
 
@@ -413,20 +425,20 @@ int csv_parse_rfc4180(struct csv_reader* this, struct csv_record* rec, const cha
         return CSV_GOOD;
 }
 
-int csv_parse_weak(struct csv_reader* this, struct csv_record* rec, const char** line, size_t* lineIdx)
+int csv_parse_weak(struct csv_reader* this, struct csv_record* rec, const char** line, size_t* lineIdx, unsigned char_limit)
 {
         uint delimIdx = 0;
         uint lastDelimIdx = 0;
-        uint onQuote = FALSE;
+        uint onQuote = false;
         uint trailingSpace = 0;
         int nlCount = 0;
-        int appendField = FALSE;
-        int firstChar = TRUE;
+        int appendField = false;
+        int firstChar = true;
 
         ++(*lineIdx);
 
-        while (TRUE) {
-                for (; (*line)[*lineIdx] != '\0' && delimIdx != this->_in->delimLen; ++(*lineIdx)) {
+        while (true) {
+                for (; *lineIdx < char_limit && (*line)[*lineIdx] != '\0' && delimIdx != this->_in->delimLen; ++(*lineIdx)) {
                         if (onQuote && (*line)[*lineIdx] == this->delimiter[delimIdx]) {
                                 ++delimIdx;
                         } else {
@@ -442,7 +454,7 @@ int csv_parse_weak(struct csv_reader* this, struct csv_record* rec, const char**
                         if (!firstChar || !this->trim || !isspace((*line)[*lineIdx])) {
                                 rec->_in->buffer[rec->_in->bufidx++] = (*line)[*lineIdx];
 
-                                firstChar = FALSE;
+                                firstChar = false;
                                 if (this->trim && isspace((*line)[*lineIdx]))
                                         ++trailingSpace;
                                 else if (onQuote + delimIdx == lastDelimIdx)
@@ -468,8 +480,8 @@ int csv_parse_weak(struct csv_reader* this, struct csv_record* rec, const char**
 
         if (delimIdx == this->_in->delimLen) {
                 /* Handle Trailing delimiter */
-                if (!((*line)[*lineIdx]))
-                        appendField = TRUE;
+                if (!((*line)[*lineIdx]) || *lineIdx == char_limit)
+                        appendField = true;
                 rec->_in->bufidx -= this->_in->delimLen;
         }
         rec->_in->bufidx -= trailingSpace + 1;
@@ -482,15 +494,15 @@ int csv_parse_weak(struct csv_reader* this, struct csv_record* rec, const char**
         return CSV_GOOD;
 }
 
-int csv_parse_none(struct csv_reader* this, struct csv_record* rec, const char** line, size_t* lineIdx)
+int csv_parse_none(struct csv_reader* this, struct csv_record* rec, const char** line, size_t* lineIdx, unsigned char_limit)
 {
         uint delimIdx = 0;
         uint lastDelimIdx = 0;
         uint trailingSpace = 0;
-        int appendField = FALSE;
-        int firstChar = TRUE;
+        int appendField = false;
+        int firstChar = true;
 
-        for (; (*line)[*lineIdx] != '\0' && delimIdx != this->_in->delimLen; ++(*lineIdx)) {
+        for (; *lineIdx < char_limit && (*line)[*lineIdx] != '\0' && delimIdx != this->_in->delimLen; ++(*lineIdx)) {
                 if ((*line)[*lineIdx] == this->delimiter[delimIdx])
                         ++delimIdx;
                 else if (delimIdx != 0)
@@ -499,7 +511,7 @@ int csv_parse_none(struct csv_reader* this, struct csv_record* rec, const char**
                 if (!firstChar || !this->trim || !isspace((*line)[*lineIdx])) {
                         rec->_in->buffer[rec->_in->bufidx++] = (*line)[*lineIdx];
 
-                        firstChar = FALSE;
+                        firstChar = false;
                         if (this->trim && isspace((*line)[*lineIdx]))
                                 ++trailingSpace;
                         else if (delimIdx == lastDelimIdx)
@@ -515,8 +527,8 @@ int csv_parse_none(struct csv_reader* this, struct csv_record* rec, const char**
 
         if (delimIdx == this->_in->delimLen) {
                 /* Handle Trailing delimiter */
-                if (!((*line)[*lineIdx]))
-                        appendField = TRUE;
+                if (!((*line)[*lineIdx]) || *lineIdx == char_limit)
+                        appendField = true;
                 rec->_in->bufidx -= this->_in->delimLen;
         }
 
@@ -529,7 +541,7 @@ int csv_parse_none(struct csv_reader* this, struct csv_record* rec, const char**
         return CSV_GOOD;
 }
 
-void csv_determine_delimiter(struct csv_reader* this, const char* header)
+void csv_determine_delimiter(struct csv_reader* this, const char* header, unsigned char_limit)
 {
         uint delimLen = strlen(this->delimiter);
         if (delimLen) {
@@ -543,7 +555,7 @@ void csv_determine_delimiter(struct csv_reader* this, const char* header)
         int count = 0;
         int maxCount = 0;
         for (; i < strlen(delims); ++i) {
-                count = charcount(header, delims[i]);
+                count = charncount(header, delims[i], char_limit);
                 if (count > maxCount) {
                         sel = i;
                         maxCount = count;

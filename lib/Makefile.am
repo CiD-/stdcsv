@@ -1,6 +1,7 @@
-SUBDIRS = docs
+SUBDIRS = docs util
 
-AM_CPPFLAGS = -Iinclude
-include_HEADERS = include/csv.h 
+AM_CPPFLAGS = -Iinclude -Iutil
+include_HEADERS = include/csv.h
 lib_LTLIBRARIES = libcsv.la
-libcsv_la_SOURCES = include/charnode.h include/util.h include/csverror.h include/csvsignal.h include/safegetline.h reader.c writer.c util.c safegetline.c csv.c csverror.c csvsignal.c charnode.c
+libcsv_la_LIBADD = util/libutil.la
+libcsv_la_SOURCES = misc.h misc.c charnode.h csverror.h csvsignal.h safegetline.h reader.c writer.c safegetline.c csv.c csverror.c csvsignal.c charnode.c

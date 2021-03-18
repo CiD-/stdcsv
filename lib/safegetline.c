@@ -1,10 +1,13 @@
 #include "safegetline.h"
+#include "misc.h"
+
+#include <string.h>
 
 int _safegetline(FILE *fp, char* buffer, size_t* buflen, size_t* off)
 {
         char *end = buffer + *buflen - 1;
         char *dst = buffer + *off;
-        int endfound = FALSE;
+        int endfound = false;
         int c = 0;
 
         while (!endfound && dst < end && (c = getc(fp)) != EOF)
@@ -14,14 +17,14 @@ int _safegetline(FILE *fp, char* buffer, size_t* buflen, size_t* off)
                         c = getc(fp);
                         if (c != '\n' && c != EOF)
                                 ungetc(c, fp);
-                        endfound = TRUE;
+                        endfound = true;
                 }
                 if (c == '\n') {
                         /* Handles trailing EOL at EOF consistently */
                         c = getc(fp);
                         if (c != EOF)
                                 ungetc(c, fp);
-                        endfound = TRUE;
+                        endfound = true;
                 }
         }
 

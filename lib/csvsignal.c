@@ -1,5 +1,9 @@
-#include "util.h"
 #include "csvsignal.h"
+#include <string.h>
+#include <stdio.h>
+#include "charnode.h"
+#include "util.h"
+#include "misc.h"
 
 /**
  * Signal Handlers
@@ -7,7 +11,7 @@
  */
 static struct sigaction act;
 static sigset_t vg_shutup = { {0} };
-static int _signals_ready = FALSE;
+static int _signals_ready = false;
 static struct charnode* _tmp_file_head = NULL;
 
 void init_sig()
@@ -23,7 +27,7 @@ void init_sig()
         sigaction(SIGTERM, &act, NULL);
         sigaction(SIGHUP, &act, NULL);
 
-        _signals_ready = TRUE;
+        _signals_ready = true;
 }
 
 void cleanexit()
@@ -53,7 +57,7 @@ void tmp_removeall()
         while (_tmp_file_head) {
                 const char* data = cn_pop(&_tmp_file_head);
                 tmp_remove_file(data);
-                FREE(data);
+                free_(data);
         }
 }
 

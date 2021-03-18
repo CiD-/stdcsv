@@ -13,7 +13,7 @@
                         errsize += strlen(se) + 2;      \
                 }                                       \
                 char* newmsg = NULL;                    \
-                MALLOC(newmsg, errsize);                \
+                malloc_(newmsg, errsize);               \
                 strcpy(newmsg, errmsg);                 \
                 if (se) {                               \
                         strcat(newmsg, ": ");           \

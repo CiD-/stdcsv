@@ -1,10 +1,11 @@
 #include "charnode.h"
+#include "misc.h"
 #include "util.h"
 
 struct charnode* cn_push(struct charnode** head, const char* s)
 {
         struct charnode* newnode = NULL;
-        MALLOC(newnode, sizeof(*newnode));
+        malloc_(newnode, sizeof(*newnode));
         *newnode = (struct charnode) {
                 s
                 ,*head
@@ -30,15 +31,15 @@ void cn_remove(struct charnode** head, struct charnode* node)
         else
                 *head = node->prev;
 
-        FREE(node->data);
-        FREE(node);
+        free_(node->data);
+        free_(node);
 }
 
 const char* cn_pop(struct charnode** head)
 {
         struct charnode* newhead = (*head)->prev;
         const char* data = (*head)->data;
-        FREE(*head);
+        free_(*head);
         if (newhead)
                 newhead->next = NULL;
         (*head) = newhead;

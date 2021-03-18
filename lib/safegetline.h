@@ -1,7 +1,7 @@
 #ifndef SAFEGETLINE_H
 #define SAFEGETLINE_H
 
-#include "util.h"
+#include <stdio.h>
 
 /**
  * safegetline gets the next line from the provided

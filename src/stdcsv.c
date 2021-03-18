@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <getopt.h>
 #include "util.h"
 #include "csv.h"
@@ -63,7 +64,7 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                 fputs("Not yet implemented\n", stderr);
                 exit(EXIT_FAILURE);
         case 'f':
-                reader->failsafe_mode = TRUE;
+                reader->failsafe_mode = true;
                 //csv_open_temp(writer);
                 break;
         case 'h': /* help */
@@ -73,7 +74,8 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                 reader->normal = CSV_NORMAL_OPEN;
                 break;
         case 'N': { /* number-of-fields */
-                long val = stringtolong10(optarg);
+                long val = 0;
+                str2long(&val, optarg);
                 if (val < 1) {
                         fputs("Invalid number of columns.\n", stderr);
                         exit(EXIT_FAILURE);
@@ -82,10 +84,10 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
         }
                 break;
         case 'i': /* in-place-edit */
-                in_place_edit = TRUE;
+                in_place_edit = true;
                 break;
         case 'x': /* quotes */
-                if(!strcasecmp(optarg, "ALL")) { 
+                if(!strcasecmp(optarg, "ALL")) {
                         writer->quotes = QUOTE_ALL;
                         reader->quotes = QUOTE_ALL;
                 }
@@ -93,11 +95,11 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                         writer->quotes = QUOTE_WEAK;
                         reader->quotes = QUOTE_WEAK;
                 }
-                else if (!strcasecmp(optarg, "NONE")) { 
+                else if (!strcasecmp(optarg, "NONE")) {
                         writer->quotes = QUOTE_NONE;
                         reader->quotes = QUOTE_NONE;
                 }
-                else if (!strcasecmp(optarg, "RFC4180")) { 
+                else if (!strcasecmp(optarg, "RFC4180")) {
                         writer->quotes = QUOTE_RFC4180;
                         reader->quotes = QUOTE_RFC4180;
                 }
@@ -144,19 +146,19 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                 }
                 break;
         case 'D': /* output-delimiter */
-                STRNCPY(writer->delimiter, optarg, 32);
+                strncpy_(writer->delimiter, optarg, 32);
                 break;
         case 'd': /* input-delimiter */
-                STRNCPY(reader->delimiter, optarg, 32);
+                strncpy_(reader->delimiter, optarg, 32);
                 break;
         case 'r': /* no-embedded-nl */
-                STRNCPY(reader->embedded_break, "", 3);
+                strncpy_(reader->embedded_break, "", 3);
                 break;
         case 'R': /* replace-newlines */
-                STRNCPY(reader->embedded_break, optarg, 3);
+                strncpy_(reader->embedded_break, optarg, 3);
                 break;
         case 't': /* trim */
-                reader->trim = TRUE;
+                reader->trim = true;
                 break;
         case 'o': /* output-file */
                 if (csv_writer_open(writer, optarg) == CSV_FAIL)
@@ -164,10 +166,10 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
                 set_output_file = 1;
                 break;
         case 'W': /* windows-line-ending */
-                STRNCPY(writer->line_terminator, "\r\n", 3);
+                strncpy_(writer->line_terminator, "\r\n", 3);
                 break;
         case 'M': /* mac-line-ending */
-                STRNCPY(writer->line_terminator, "\r", 3);
+                strncpy_(writer->line_terminator, "\r", 3);
                 break;
         case '?': /* Should never get here... */
                 exit(EXIT_FAILURE);

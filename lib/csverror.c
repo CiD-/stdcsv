@@ -1,5 +1,6 @@
-#include "util.h"
+#include "misc.h"
 #include "csverror.h"
+#include "util.h"
 
 /**
  * Error Handlers
@@ -22,7 +23,7 @@ void err_printall()
         while(_err_str_head) {
                 const char* data = cn_pop(&_err_str_head);
                 fprintf(stderr, "%s\n", data);
-                FREE(data);
+                free_(data);
         }
 }
 
