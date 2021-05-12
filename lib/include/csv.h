@@ -31,17 +31,22 @@ extern "C" {
  */
 
 /* Forward declaration of internal structures */
-struct csv_internal;
+struct csv_record_internal;
 struct csv_read_internal;
 struct csv_write_internal;
 
+struct csv_field {
+	const char* data;
+	unsigned len;
+};
+
 /* Structure containing dynamic array of fields */
 struct csv_record {
-        struct csv_internal* _in;
-        char** fields;
-        const char* raw;
-        unsigned raw_len;
-        int size;
+	struct csv_record_internal* _in;
+	struct csv_field** fields;
+	const char* raw;
+	unsigned raw_len;
+	int size;
 };
 
 /**
@@ -50,21 +55,21 @@ struct csv_record {
  * change their behavior.
  */
 struct csv_reader {
-        struct csv_read_internal* _in;
-        char delimiter[32];
-        char embedded_break[32];
-        int quotes;
-        int normal;
-        int failsafe_mode;
-        int trim;
+	struct csv_read_internal* _in;
+	char delimiter[32];
+	char embedded_break[32];
+	int quotes;
+	int normal;
+	_Bool failsafe_mode;
+	_Bool trim;
 };
 
 struct csv_writer {
-        struct csv_write_internal* _in;
-        FILE* file;
-        char delimiter[32];
-        char line_terminator[3];
-        int quotes;
+	struct csv_write_internal* _in;
+	FILE* file;
+	char delimiter[32];
+	char line_terminator[3];
+	int quotes;
 };
 
 /**

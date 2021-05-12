@@ -1,110 +1,109 @@
 #include "queue.h"
 #include "util.h"
 
-Queue* queue_enqueue(Queue** head, void* data)
+queue* queue_enqueue(queue** head, void* data)
 {
-        Queue* newnode = NULL;
-        malloc_(newnode, sizeof(*newnode));
-        *newnode = (Queue) {
-                 data
-                ,NULL
-                ,NULL
-        };
+	queue* newnode = malloc_(sizeof(*newnode));
+	*newnode = (queue) {
+		 data
+		,NULL
+		,NULL
+	};
 
-        Queue* back = queue_back(*head);
+	queue* back = queue_back(*head);
 
-        if (back) {
-                newnode->prev = back;
-                back->next = newnode;
-        }
+	if (back) {
+		newnode->prev = back;
+		back->next = newnode;
+	}
 
-        if (!*head)
-                *head = newnode;
+	if (!*head)
+		*head = newnode;
 
-        return newnode;
+	return newnode;
 }
 
-void queue_delete(Queue** head, Queue* node)
+void queue_delete(queue** head, queue* node)
 {
-        if (!node)
-                return;
+	if (!node)
+		return;
 
-        void* data = queue_remove(head, node);
-        free_(data);
+	void* data = queue_remove(head, node);
+	free_(data);
 }
 
-void* queue_remove(Queue** head, Queue* node)
+void* queue_remove(queue** head, queue* node)
 {
-        if (!node)
-                return NULL;
+	if (!node)
+		return NULL;
 
-        if (node->next)
-                node->next->prev = node->prev;
-        if (node->prev)
-                node->prev->next = node->next;
-        else
-                *head = node->next;
+	if (node->next)
+		node->next->prev = node->prev;
+	if (node->prev)
+		node->prev->next = node->next;
+	else
+		*head = node->next;
 
-        void* data = node->data;
-        free_(node);
+	void* data = node->data;
+	free_(node);
 
-        return data;
+	return data;
 }
 
-void* queue_dequeue(Queue** head)
+void* queue_dequeue(queue** head)
 {
-        return queue_remove(head, *head);
+	return queue_remove(head, *head);
 }
 
-Queue* queue_front(Queue* node)
+queue* queue_front(queue* node)
 {
-        if (!node)
-                return NULL;
+	if (!node)
+		return NULL;
 
-        Queue* head = node;
-        while (head && head->prev)
-                head = head->prev;
+	queue* head = node;
+	while (head && head->prev)
+		head = head->prev;
 
-        return head;
+	return head;
 }
 
-Queue* queue_back(Queue* node)
+queue* queue_back(queue* node)
 {
-        if (!node)
-                return NULL;
+	if (!node)
+		return NULL;
 
-        Queue* back = node;
-        while (back && back->next)
-                back = back->next;
+	queue* back = node;
+	while (back && back->next)
+		back = back->next;
 
-        return back;
+	return back;
 }
 
-int queue_count(Queue* head)
+int queue_count(queue* head)
 {
-        if (!head)
-                return 0;
+	if (!head)
+		return 0;
 
-        int count = 1;
-        Queue* back = head;
-        while ((back = back->next))
-                ++count;
+	int count = 1;
+	queue* back = head;
+	while ((back = back->next))
+		++count;
 
-        return count;
+	return count;
 }
 
-void queue_free_func(Queue** head, generic_data_fn free_func)
+void queue_free_func(queue** head, generic_data_fn free_func)
 {
-        for (; *head; queue_dequeue(head))
-                free_func((*head)->data);
+	for (; *head; queue_dequeue(head))
+		free_func((*head)->data);
 }
 
-void queue_free_data(Queue** head)
+void queue_free_data(queue** head)
 {
-        for (; *head; queue_delete(head, *head));
+	for (; *head; queue_delete(head, *head));
 }
 
-void queue_free(Queue** head)
+void queue_free(queue** head)
 {
-        for (; *head; queue_dequeue(head));
+	for (; *head; queue_dequeue(head));
 }

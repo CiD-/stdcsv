@@ -1,337 +1,205 @@
 #include "fifo.h"
 #include "util.h"
-#include <stdbool.h>
 
-Fifo* fifo_new(size_t elem_size, size_t buf_size)
+fifo* fifo_construct(fifo* self, size_t elem_size, unsigned buf_size)
 {
-        Fifo* new_fifo = NULL;
-        malloc_(new_fifo, sizeof(*new_fifo));
+	/* fifo requires a buffer of atleast size 2 */
+	if (buf_size <= 1) {
+		buf_size = 2;
+	}
+	*self = (fifo) {
+		 new_(vec, elem_size)   /* buf */
+		,{ 0 }                  /* head_mutex */
+		,{ 0 }                  /* tail_mutex */
+		,{ 0 }                  /* open_mutex */
+		,{ 0 }                  /* cond_add */
+		,{ 0 }                  /* cond_get */
+		,{ 0 }                  /* cond_work */
+		,0                      /* head */
+		,0                      /* tail */
+		,0                      /* input_count */
+		,true                   /* is_open */
+	};
 
-        return fifo_construct(new_fifo, elem_size, buf_size);
+	vec_resize(self->buf, buf_size);
+
+	/* build these no matter what
+	 * this makes all fifos interchangeable.
+	 */
+	pthread_mutex_init(&self->head_mutex, NULL);
+	pthread_mutex_init(&self->tail_mutex, NULL);
+	pthread_mutex_init(&self->open_mutex, NULL);
+	pthread_cond_init(&self->cond_add, NULL);
+	pthread_cond_init(&self->cond_get, NULL);
+	pthread_cond_init(&self->cond_work, NULL);
+
+	return self;
 }
 
-Fifo* fifo_construct(Fifo* fifo, size_t elem_size, size_t buf_size)
+void fifo_destroy(fifo* self)
 {
-        /* Fifo requires a buffer of atleast size 2 */
-        if (buf_size <= 1) {
-                buf_size = 2;
-        }
-        *fifo = (Fifo) {
-                 vec_new(elem_size)     /* buf */
-                ,{ 0 }                  /* head_mutex */
-                ,{ 0 }                  /* tail_mutex */
-                ,{ 0 }                  /* open_mutex */
-                ,{ 0 }                  /* cond_add */
-                ,{ 0 }                  /* cond_get */
-                ,{ 0 }                  /* cond_half */
-                ,0                      /* head */
-                ,0                      /* tail */
-                ,0                      /* input_count */
-                ,true                   /* is_open */
-        };
-
-        vec_resize(fifo->buf, buf_size);
-
-        /* Build these no matter what
-         * This makes all fifos interchangeable.
-         */
-        pthread_mutex_init(&fifo->head_mutex, NULL);
-        pthread_mutex_init(&fifo->tail_mutex, NULL);
-        pthread_mutex_init(&fifo->open_mutex, NULL);
-        pthread_cond_init(&fifo->cond_add, NULL);
-        pthread_cond_init(&fifo->cond_get, NULL);
-        pthread_cond_init(&fifo->cond_half, NULL);
-
-        return fifo;
+	delete_(vec, self->buf);
+	pthread_mutex_destroy(&self->head_mutex);
+	pthread_mutex_destroy(&self->tail_mutex);
+	pthread_mutex_destroy(&self->open_mutex);
+	pthread_cond_destroy(&self->cond_add);
+	pthread_cond_destroy(&self->cond_get);
+	pthread_cond_destroy(&self->cond_work);
 }
 
-void fifo_free(Fifo* fifo)
+void fifo_set_open(fifo* self, int is_open)
 {
-        fifo_destroy(fifo);
-        free_(fifo);
+	pthread_mutex_lock(&self->tail_mutex);
+	pthread_mutex_lock(&self->head_mutex);
+	pthread_mutex_lock(&self->open_mutex);
+
+	self->is_open = is_open;
+
+	pthread_cond_broadcast(&self->cond_get);
+	pthread_cond_broadcast(&self->cond_add);
+	pthread_cond_broadcast(&self->cond_work);
+
+	pthread_mutex_unlock(&self->open_mutex);
+	pthread_mutex_unlock(&self->head_mutex);
+	pthread_mutex_unlock(&self->tail_mutex);
 }
 
-void fifo_destroy(Fifo* fifo)
+/* this struct was never meant to be resizable
+ * but under the assumption that you are okay
+ * losing all currently held data... yea...
+ * go for it. (definitely not thread-safe
+ */
+void fifo_resize(fifo* self, unsigned n)
 {
-        vec_free(fifo->buf);
-        pthread_mutex_destroy(&fifo->head_mutex);
-        pthread_mutex_destroy(&fifo->tail_mutex);
-        pthread_mutex_destroy(&fifo->open_mutex);
-        pthread_cond_destroy(&fifo->cond_add);
-        pthread_cond_destroy(&fifo->cond_get);
+	/* fifo requires a buffer of atleast size 2 */
+	if (n <= 1) {
+		n = 2;
+	}
+	vec_resize(self->buf, n);
+	self->head = 0;
+	self->tail = 0;
 }
 
-void fifo_set_open(Fifo* fifo, int is_open)
+_Bool fifo_is_open(fifo* self)
 {
-        fifo->is_open = is_open;
+	pthread_mutex_lock(&self->open_mutex);
+	_Bool ret = self->is_open;
+	pthread_mutex_unlock(&self->open_mutex);
+	return ret;
 }
 
-void fifo_set_open_ts(Fifo* fifo, int is_open)
+unsigned fifo_available(fifo* f)
 {
-        pthread_mutex_lock(&fifo->tail_mutex);
-        pthread_mutex_lock(&fifo->head_mutex);
-        pthread_mutex_lock(&fifo->open_mutex);
-        fifo_set_open(fifo, is_open);
-
-        pthread_cond_broadcast(&fifo->cond_get);
-        pthread_cond_broadcast(&fifo->cond_add);
-        pthread_cond_broadcast(&fifo->cond_half);
-
-        pthread_mutex_unlock(&fifo->open_mutex);
-        pthread_mutex_unlock(&fifo->head_mutex);
-        pthread_mutex_unlock(&fifo->tail_mutex);
+	size_t available = f->head - f->tail;
+	if (f->head < f->tail) {
+		available += f->buf->size;
+	}
+	return available;
 }
 
-/** NOT Thread-safe **/
-void fifo_resize(Fifo* fifo, size_t n)
+_Bool fifo_is_empty(fifo* f)
 {
-        /* Fifo requires a buffer of atleast size 1 */
-        if (n <= 1) {
-                n = 2;
-        }
-        vec_resize(fifo->buf, n);
-        fifo->head = 0;
-        fifo->tail = 0;
+	return (f->head == f->tail);
 }
 
-_Bool fifo_is_open(Fifo* fifo)
+_Bool fifo_has_work(fifo* f)
 {
-        return fifo->is_open;
+	return (fifo_available(f) >= (3 * f->buf->size) / 4);
 }
 
-_Bool fifo_is_open_ts(Fifo* fifo)
+_Bool fifo_is_full(fifo* f)
 {
-        pthread_mutex_lock(&fifo->open_mutex);
-        _Bool ret = fifo->is_open;
-        pthread_mutex_unlock(&fifo->open_mutex);
-
-        return ret;
+	return ((f->head + 1) % f->buf->size == f->tail);
 }
 
-size_t fifo_available(Fifo* f)
-{
-        size_t available = f->head - f->tail;
-        if (f->head < f->tail) {
-                available += f->buf->size;
-        }
-        return available;
-}
-
-size_t fifo_available_ts(Fifo* f)
-{
-        pthread_mutex_lock(&f->tail_mutex);
-        pthread_mutex_lock(&f->head_mutex);
-        size_t available = f->head - f->tail;
-        if (f->head < f->tail) {
-                available += f->buf->size;
-        }
-        pthread_mutex_unlock(&f->head_mutex);
-        pthread_mutex_unlock(&f->tail_mutex);
-        return available;
-}
-
-_Bool fifo_is_empty(Fifo* f)
-{
-        return (f->head == f->tail);
-}
-
-_Bool fifo_is_empty_ts(Fifo* f)
-{
-        pthread_mutex_lock(&f->tail_mutex);
-        pthread_mutex_lock(&f->head_mutex);
-        _Bool is_empty = (f->head == f->tail);
-        pthread_mutex_unlock(&f->head_mutex);
-        pthread_mutex_unlock(&f->tail_mutex);
-        return is_empty;
-}
-
-_Bool fifo_is_over_half(Fifo* f)
-{
-        return (fifo_available(f) + f->input_count + 1 > f->buf->size / 2);
-}
-
-_Bool fifo_is_over_half_ts(Fifo* f)
-{
-        pthread_mutex_lock(&f->tail_mutex);
-        pthread_mutex_lock(&f->head_mutex);
-        _Bool is_over_half = fifo_is_over_half(f);
-        pthread_mutex_unlock(&f->tail_mutex);
-        pthread_mutex_unlock(&f->head_mutex);
-        return is_over_half;
-}
-
-_Bool fifo_is_full(Fifo* f)
-{
-        return ((f->head + 1) % f->buf->size == f->tail);
-}
-
-_Bool fifo_is_full_ts(Fifo* f)
-{
-        pthread_mutex_lock(&f->tail_mutex);
-        pthread_mutex_lock(&f->head_mutex);
-        _Bool is_full = fifo_is_full(f);
-        pthread_mutex_unlock(&f->head_mutex);
-        pthread_mutex_unlock(&f->tail_mutex);
-        return is_full;
-}
-
-/* Add input_count to current number of current
+/* add input_count to current number of current
  * available elements to avoid clobber
  */
-_Bool fifo_is_receivable(Fifo* f)
+_Bool fifo_is_receivable(fifo* f)
 {
-        return (fifo_available(f) + f->input_count + 1 < f->buf->size);
+	return (fifo_available(f) + f->input_count + 1 < f->buf->size);
 }
 
-_Bool fifo_is_receivable_ts(Fifo* f)
+
+void fifo_set_full(fifo* f)
 {
-        return (fifo_available_ts(f) + f->input_count + 1 < f->buf->size);
+	f->tail = 0;
+	f->head = f->buf->size - 1;
 }
 
-void fifo_set_full(Fifo* f)
+void* fifo_get(fifo* f)
 {
-        f->tail = 0;
-        f->head = f->buf->size - 1;
+	void* data = fifo_peek(f);
+	fifo_consume(f);
+	return data;
 }
 
-void* fifo_get(Fifo* f)
+void* fifo_peek(fifo* f)
 {
-        void* data = fifo_peek(f);
-        fifo_consume(f);
-        return data;
+	return vec_at(f->buf, f->tail);
 }
 
-void* fifo_get_ts(Fifo* f)
+void fifo_consume(fifo* f)
 {
-        void* data = fifo_peek_ts(f);
-        fifo_consume_ts(f);
-        return data;
+	pthread_mutex_lock(&f->tail_mutex);
+	++f->tail;
+	f->tail %= f->buf->size;
+	pthread_cond_signal(&f->cond_get);
+	pthread_mutex_unlock(&f->tail_mutex);
 }
 
-void* fifo_peek(Fifo* f)
+int fifo_add(fifo* f, void* data)
 {
-        return vec_at(f->buf, f->tail);
+	pthread_mutex_lock(&f->head_mutex);
+	vec_set(f->buf, f->head, data);
+	++f->head;
+	f->head %= f->buf->size;
+	pthread_cond_signal(&f->cond_add);
+	if (fifo_has_work(f)) {
+		pthread_cond_signal(&f->cond_work);
+	}
+	pthread_mutex_unlock(&f->head_mutex);
+
+	return 0;
 }
 
-void* fifo_peek_ts(Fifo* f)
+int fifo_advance(fifo* f)
 {
-        pthread_mutex_lock(&f->tail_mutex);
-        void* data = fifo_peek(f);
-        pthread_mutex_unlock(&f->tail_mutex);
-        return data;
+	pthread_mutex_lock(&f->head_mutex);
+	++f->head;
+	f->head %= f->buf->size;
+	pthread_cond_signal(&f->cond_add);
+	if (fifo_has_work(f)) {
+		pthread_cond_signal(&f->cond_work);
+	}
+	pthread_mutex_unlock(&f->head_mutex);
+
+	return 0;
 }
 
-void fifo_consume(Fifo* f)
+void fifo_wait_for_add(fifo* f)
 {
-        ++f->tail;
-        f->tail %= f->buf->size;
+	pthread_mutex_lock(&f->head_mutex);
+	while (fifo_is_open(f) && fifo_is_empty(f)) {
+		pthread_cond_wait(&f->cond_add, &f->head_mutex);
+	}
+	pthread_mutex_unlock(&f->head_mutex);
 }
 
-void fifo_consume_ts(Fifo* f)
+void fifo_wait_for_get(fifo* f)
 {
-        pthread_mutex_lock(&f->tail_mutex);
-        fifo_consume(f);
-        pthread_cond_signal(&f->cond_get);
-        pthread_mutex_unlock(&f->tail_mutex);
+	pthread_mutex_lock(&f->tail_mutex);
+	while (!fifo_is_receivable(f)) {
+		pthread_cond_wait(&f->cond_get, &f->tail_mutex);
+	}
+	pthread_mutex_unlock(&f->tail_mutex);
 }
 
-int fifo_recycle(Fifo* f, void* data)
+void fifo_wait_for_work(fifo* f)
 {
-        size_t waste_idx = f->tail - 1;
-        waste_idx %= f->buf->size;
-        vec_set(f->buf, waste_idx, data);
-        fifo_advance(f);
-
-        return 0;
-}
-
-int fifo_recycle_ts(Fifo* f, void* data)
-{
-        pthread_mutex_lock(&f->tail_mutex);
-        pthread_mutex_lock(&f->head_mutex);
-        fifo_recycle(f, data);
-        pthread_cond_signal(&f->cond_add);
-        /* No need to signal here in this application */
-        //if (!fifo_is_receivable(f)) {
-        //        pthread_cond_signal(&f->cond_half);
-        //}
-        pthread_mutex_unlock(&f->head_mutex);
-        pthread_mutex_unlock(&f->tail_mutex);
-
-        return 0;
-}
-
-int fifo_add(Fifo* f, void* data)
-{
-        vec_set(f->buf, f->head, data);
-        fifo_advance(f);
-
-        return 0;
-}
-
-int fifo_add_ts(Fifo* f, void* data)
-{
-        pthread_mutex_lock(&f->tail_mutex);
-        pthread_mutex_lock(&f->head_mutex);
-        fifo_add(f, data);
-        pthread_cond_signal(&f->cond_add);
-        if (fifo_is_over_half(f)) {
-                pthread_cond_signal(&f->cond_half);
-        }
-        pthread_mutex_unlock(&f->head_mutex);
-        pthread_mutex_unlock(&f->tail_mutex);
-
-        return 0;
-}
-
-int fifo_advance(Fifo* f)
-{
-        ++f->head;
-        f->head %= f->buf->size;
-
-        return 0;
-}
-
-int fifo_advance_ts(Fifo* f)
-{
-        pthread_mutex_lock(&f->tail_mutex);
-        pthread_mutex_lock(&f->head_mutex);
-        fifo_advance(f);
-        pthread_cond_signal(&f->cond_add);
-        if (fifo_is_over_half(f)) {
-                pthread_cond_signal(&f->cond_half);
-        }
-        pthread_mutex_unlock(&f->head_mutex);
-        pthread_mutex_unlock(&f->tail_mutex);
-
-        return 0;
-}
-
-void fifo_wait_for_add(Fifo* f)
-{
-        pthread_mutex_lock(&f->head_mutex);
-        while (fifo_is_open(f) && fifo_is_empty(f)) {
-                pthread_cond_wait(&f->cond_add, &f->head_mutex);
-        }
-        pthread_mutex_unlock(&f->head_mutex);
-}
-
-void fifo_wait_for_get(Fifo* f)
-{
-        pthread_mutex_lock(&f->tail_mutex);
-        while (fifo_is_full(f)) {
-                pthread_cond_wait(&f->cond_get, &f->tail_mutex);
-        }
-        pthread_mutex_unlock(&f->tail_mutex);
-}
-
-void fifo_wait_for_half(Fifo* f)
-{
-        pthread_mutex_lock(&f->head_mutex);
-        /* No loop here in case we never fill. */
-        if (!fifo_is_over_half(f)) {
-                pthread_cond_wait(&f->cond_half, &f->head_mutex);
-                //return (fifo_available(f) + f->input_count + 1 < f->buf->size);
-        }
-        pthread_mutex_unlock(&f->head_mutex);
+	pthread_mutex_lock(&f->head_mutex);
+	while (fifo_is_open(f) && !fifo_has_work(f)) {
+		pthread_cond_wait(&f->cond_work, &f->head_mutex);
+	}
+	pthread_mutex_unlock(&f->head_mutex);
 }

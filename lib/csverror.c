@@ -6,25 +6,25 @@
  * Error Handlers
  */
 
-static struct charnode* _err_str_head = NULL;
+static queue* _err_str_head;
 
-void err_remove(struct charnode* node)
+void err_remove(queue* node)
 {
-       cn_remove(&_err_str_head, node);
+       queue_remove(&_err_str_head, node);
 }
 
-struct charnode* err_push(const char* err)
+queue* err_push(const char* err)
 {
-        return cn_push(&_err_str_head, err);
+	return queue_enqueue(&_err_str_head, (void*)err);
 }
 
 void err_printall()
 {
-        while(_err_str_head) {
-                const char* data = cn_pop(&_err_str_head);
-                fprintf(stderr, "%s\n", data);
-                free_(data);
-        }
+	while(_err_str_head) {
+		const char* data = queue_dequeue(&_err_str_head);
+		fprintf(stderr, "%s\n", data);
+		free_(data);
+	}
 }
 
 

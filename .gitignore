@@ -1,4 +1,6 @@
+out.txt
 stdcsv
+*~
 .gdb_history
 .clangd/
 .cache/
