@@ -43,9 +43,9 @@ struct csv_field {
 /* Structure containing dynamic array of fields */
 struct csv_record {
 	struct csv_record_internal* _in;
-	struct csv_field** fields;
-	const char* raw;
-	unsigned raw_len;
+	struct csv_field* fields;
+	const char* rec;
+	unsigned reclen;
 	int size;
 };
 
@@ -81,17 +81,34 @@ void csv_perror_exit();
 /**
  */
 struct csv_record* csv_record_new();
+struct csv_record* csv_record_construct(struct csv_record*);
 
 /**
  */
 void csv_record_free(struct csv_record* rec);
-void csv_record_free_not_fields(struct csv_record* rec);
+void csv_record_destroy(struct csv_record* self);
+/**
+ * free, but field pointers are still valid
+ * user is now responsible for freeing the
+ * array of struct csv_field AS WELL AS
+ * each individual data field:
+ *
+ * int n = rec->size;
+ * struct csv_field* fields = csv_release_data(rec);
+ *
+ * .... DO STUFF ....
+ *
+ * for (int i = 0; i < n; ++i) {
+ *         free(fields[i].data);
+ * }
+ * free(fields);
+ */
+struct csv_field* csv_record_release_data(struct csv_record* rec);
 
 /**
- * Clone the fields of a csv_record and
- * clone the individual fields themselves.
+ * Clone the record and its data
  */
-struct csv_record* csv_record_clone(struct csv_record*);
+struct csv_record* csv_record_clone(const struct csv_record*);
 
 /**
  * CSV Reader

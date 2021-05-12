@@ -266,7 +266,6 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CHECK_CFLAGS = @CHECK_CFLAGS@
 CHECK_LIBS = @CHECK_LIBS@
-CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
@@ -366,6 +365,7 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -384,7 +384,7 @@ libcsv_la_SOURCES = misc.h misc.c \
 					csverror.h csverror.c \
 					csvsignal.h csvsignal.c \
 					safegetline.h safegetline.c \
-					reader.c writer.c csv.c
+					internal.h reader.c writer.c csv.c
 
 all: all-recursive
 

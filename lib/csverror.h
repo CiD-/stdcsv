@@ -4,7 +4,7 @@
 #include "csv.h"
 #include "util/queue.h"
 
-#define fail_if_(condition, errmsg)  {               \
+#define csvfail_if_(condition, errmsg)  {            \
 	if (condition) {                             \
 		char* se = NULL;                     \
 		size_t errsize = strlen(errmsg) + 1; \

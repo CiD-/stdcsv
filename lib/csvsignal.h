@@ -3,6 +3,7 @@
 
 #include <signal.h>
 #include <errno.h>
+#include "util/queue.h"
 
 /**
  * Initialize signal handlers
@@ -18,12 +19,12 @@ void cleanexit();
 /**
  * Add temp file
  */
-struct charnode* tmp_push(const char* tmp_file);
+struct queue* tmp_push(const char* tmp_file);
 
 /**
  * Remove temp node only
  */
-void tmp_remove_node(struct charnode* node);
+void tmp_remove_node(struct queue* node);
 
 /**
  * Remove temp file

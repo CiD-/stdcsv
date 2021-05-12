@@ -1,8 +1,7 @@
 #include "csvsignal.h"
 #include <string.h>
 #include <stdio.h>
-#include "charnode.h"
-#include "util.h"
+#include "util/util.h"
 #include "misc.h"
 
 /**
@@ -12,7 +11,7 @@
 static struct sigaction act;
 static sigset_t vg_shutup = { {0} };
 static int _signals_ready = false;
-static struct charnode* _tmp_file_head = NULL;
+static queue* _tmp_file_head = NULL;
 
 void init_sig()
 {
@@ -36,14 +35,14 @@ void cleanexit()
 	exit(EXIT_FAILURE);
 }
 
-struct charnode* tmp_push(const char* tmp_file)
+queue* tmp_push(const char* tmp_file)
 {
-	return cn_push(&_tmp_file_head, strdup(tmp_file));
+	return queue_enqueue(&_tmp_file_head, strdup(tmp_file));
 }
 
-void tmp_remove_node(struct charnode* node)
+void tmp_remove_node(queue* node)
 {
-	cn_remove(&_tmp_file_head, node);
+	queue_remove(&_tmp_file_head, node);
 }
 
 void tmp_remove_file(const char* tmp_file)
@@ -55,7 +54,7 @@ void tmp_remove_file(const char* tmp_file)
 void tmp_removeall()
 {
 	while (_tmp_file_head) {
-		const char* data = cn_pop(&_tmp_file_head);
+		const char* data = queue_dequeue(&_tmp_file_head);
 		tmp_remove_file(data);
 		free_(data);
 	}
