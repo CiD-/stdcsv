@@ -1,3 +1,7 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "csv.h"
 #include <libgen.h>
 #include "csvsignal.h"
@@ -9,83 +13,67 @@
 
 struct csv_writer* csv_writer_new()
 {
+	struct csv_writer* self = malloc_(sizeof(*self));
+	return self;
+
+}
+struct csv_writer* csv_writer_construct(struct csv_writer* self)
+{
 	init_sig();
 
-	struct csv_writer* self = NULL;
-
-	self = malloc_(sizeof(*self));
 	*self = (struct csv_writer) {
-		 NULL
-		,stdout
-		,","
-		,"\n"
-		,QUOTE_RFC4180
+		 NULL          /* _in */
+		,QUOTE_RFC4180 /* quotes */
 	};
 
 	self->_in = malloc_(sizeof(*self->_in));
 	*self->_in = (struct csv_write_internal) {
-		 NULL   /* buffer */
+		 stdout /* file */
+		,NULL   /* buffer */
+		,0      /* bufsize */
 		,NULL   /* tmp_node */
-		,""     /* tempname */
-		,""     /* filename */
-		,""     /* filename_org */
-		,0      /* bufferSize */
-		,1      /* delimLen */
-		,0      /* recordLen */
+		,NULL   /* tempname */
+		,NULL   /* filename */
+		,NULL   /* filename_org */
+		,{ 0 }  /* delim */
+		,0      /* record_len */
 	};
 
-	increase_buffer(&self->_in->buffer, &self->_in->bufferSize);
+	string_construct(&self->_in->delim);
+	increase_buffer(&self->_in->buffer, &self->_in->bufsize);
 
 	return self;
-
 }
 
 void csv_writer_free(struct csv_writer* self)
 {
-	free_(self->_in->buffer);
-	free_(self->_in);
+	csv_writer_destroy(self);
 	free_(self);
 }
 
-void csv_nwrite_field(struct csv_writer* self, const char* field, unsigned char_limit)
+void csv_writer_destroy(struct csv_writer* self)
 {
-	unsigned writeIndex = 0;
-	int quoteCurrentField = 0;
-	unsigned delimIdx = 0;
-	const char* c = NULL;
-
-	quoteCurrentField = (self->quotes == QUOTE_ALL);
-	writeIndex = 0;
-	for (c = field; *c && c - field < char_limit; ++c) {
-		if (writeIndex + 3 > self->_in->bufferSize)
-			increase_buffer(&self->_in->buffer, &self->_in->bufferSize);
-		self->_in->buffer[writeIndex++] = *c;
-		if (*c == '"' && self->quotes >= QUOTE_RFC4180) {
-			self->_in->buffer[writeIndex++] = '"';
-			quoteCurrentField = true;
-		}
-		if (self->quotes && !quoteCurrentField) {
-			if (strhaschar("\"\n\r", *c))
-				quoteCurrentField = 1;
-			else if (*c == self->delimiter[delimIdx])
-				++delimIdx;
-			else
-				delimIdx = (*c == self->delimiter[0]) ? 1 : 0;
-
-			if (delimIdx == self->_in->delimLen)
-				quoteCurrentField = true;
-		}
-	}
-	self->_in->buffer[writeIndex] = '\0';
-	if (quoteCurrentField)
-		fprintf(self->file, "\"%s\"", self->_in->buffer);
-	else
-		fputs(self->_in->buffer, self->file);
+	free_(self->_in->buffer);
+	free_(self->_in);
 }
 
-void csv_write_field(struct csv_writer* self, const char* field)
+void csv_write_field(struct csv_writer* self, const struct csv_field* field)
 {
-	csv_nwrite_field(self, field, UINT_MAX);
+	_Bool quote_current_field = false;
+	const char* c = field->data;
+
+	if (memchr(field->data, '"', field->len)
+	 || memchr(field->data, '\r', field->len)
+	 || memchr(field->data, '\n', field->len)
+	 || memmem(field->data,
+		   field->len,
+		   self->_in->delim.data,
+		   self->_in->delim.size)) {
+		fprintf(self->_in->file, "\"%.*s\"", field->len, field->data);
+		return;
+	}
+
+	fprintf(self->_in->file, "%.*s", field->len, field->data);
 }
 
 void csv_write_record(struct csv_writer* self, struct csv_record* rec)
@@ -161,14 +149,14 @@ int csv_writer_close(struct csv_writer* self)
 		csvfail_if_(ret, self->_in->filename);
 		tmp_remove_node(self->_in->tmp_node);
 	} else {
-		FILE* dumpFile = fopen(self->_in->tempname, "r");
-		csvfail_if_(!dumpFile, self->_in->tempname);
+		FILE* dump_file = fopen(self->_in->tempname, "r");
+		csvfail_if_(!dump_file, self->_in->tempname);
 
 		char c = '\0';
-		while ((c = getc(dumpFile)) != EOF)
+		while ((c = getc(dump_file)) != EOF)
 			putchar(c);
 
-		csvfail_if_(fclose(dumpFile) == EOF, self->_in->tempname);
+		csvfail_if_(fclose(dump_file) == EOF, self->_in->tempname);
 		tmp_remove_file(self->_in->tmp_node->data);
 		tmp_remove_node(self->_in->tmp_node);
 	}

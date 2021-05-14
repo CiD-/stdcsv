@@ -154,3 +154,9 @@ void string_copy(string* dest, string* src)
 	memcpy(dest->data, src->data, src->size);
 	((char*) dest->data)[dest->size] = '\0';
 }
+
+void string_resize(string* s, size_t n)
+{
+	vec_resize(s, n);
+	((char*) s->data)[n] = '\0';
+}

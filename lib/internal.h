@@ -29,6 +29,7 @@ struct csv_read_internal {
 	size_t linebuf_len; /* what is this? */
 
 	string delim;
+	string weak_delim;
 	string embedded_break;
 
 	/* Statistics */
@@ -41,14 +42,14 @@ struct csv_read_internal {
 };
 
 struct csv_write_internal {
+	FILE* file;
 	char* buffer;
+	size_t bufsize;
 	queue* tmp_node;
 	string* tempname;
 	string* filename;
 	string* filename_org;
-
-	size_t bufsize;
-	unsigned delimlen;
+	string delim;
 	int reclen;
 };
 

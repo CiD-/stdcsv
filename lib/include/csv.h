@@ -66,7 +66,6 @@ struct csv_reader {
 
 struct csv_writer {
 	struct csv_write_internal* _in;
-	FILE* file;
 	enum quote_style quotes;
 };
 
@@ -180,11 +179,13 @@ int csv_nparse_to(struct csv_reader*, struct csv_record*, const char*, unsigned 
  * Allocate resources for a writer
  */
 struct csv_writer* csv_writer_new();
+struct csv_writer* csv_writer_construct(struct csv_writer*);
 
 /**
  * Relese allocated heap resources
  */
 void csv_writer_free(struct csv_writer*);
+void csv_writer_destroy(struct csv_writer*);
 
 /**
  * return TRUE if writer has open file
@@ -227,8 +228,7 @@ void csv_write_record(struct csv_writer*, struct csv_record*);
  * Write a single field from a record.  This function
  * will not print write delimiters or line endings.
  */
-void csv_nwrite_field(struct csv_writer*, const char*, unsigned);
-void csv_write_field(struct csv_writer*, const char*);
+void csv_write_field(struct csv_writer*, const struct csv_field* field);
 
 #ifdef __cplusplus
 }

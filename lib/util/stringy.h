@@ -34,7 +34,6 @@ string* string_construct_take(string*, char*);
 #define string_get(s_) vec_begin(s_)
 #define string_empty(s_) vec_empty(s_)
 #define string_append(src_, dest_) vec_extend(src_, dest_)
-#define string_resize(s_, size_) vec_resize(s_, size_)
 #define string_clear(s_) vec_clear(s_)
 
 /* stringview interface */
@@ -50,6 +49,7 @@ size_t string_sprintf(string* s, const char* fmt, ...);
 const char* string_c_str(string* s);
 
 /* string iterface */
+void string_resize(string*, size_t);
 void string_copy(string* dest, string* src);
 
 #endif  /* STRINGY_H */

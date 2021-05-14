@@ -10,6 +10,7 @@
 #include "misc.h"
 #include "util/vec.h"
 #include "util/stringy.h"
+#include "util/stringview.h"
 #include "util/util.h"
 
 
@@ -40,7 +41,7 @@ int csv_append_line(struct csv_reader* self, string* field, size_t* recidx);
 /**
  * Simple CSV parsing. Disregard all quotes.
  */
-int csv_parse_none(struct csv_reader*, struct csv_record* rec, const char** line, size_t* recidx, unsigned* limit);
+int csv_parse_none(struct csv_reader*, stringview* field, const char** line, size_t* recidx, unsigned* limit);
 
 /**
  * Parse line respecting quotes. Quotes within
@@ -48,13 +49,13 @@ int csv_parse_none(struct csv_reader*, struct csv_record* rec, const char** line
  * Leading spaces will cause the field to not
  * be treated as qualified.
  */
-int csv_parse_weak(struct csv_reader*, struct csv_record* rec, const char** line, size_t* recidx, unsigned* limit);
+int csv_parse_weak(struct csv_reader*, string* field_data, const char** line, size_t* recidx, unsigned* limit);
 
 /**
  * Parse line according to RFC-4180 guidelines.
  * More info: https://tools.ietf.org/html/rfc4180
  */
-int csv_parse_rfc4180(struct csv_reader* self, struct csv_record* rec, const char** line, size_t* recidx, unsigned* limit);
+int csv_parse_rfc4180(struct csv_reader* self, string* field_data, const char** line, size_t* recidx, unsigned* limit);
 
 
 struct csv_reader* csv_reader_new()
@@ -81,6 +82,7 @@ struct csv_reader* csv_reader_construct(struct csv_reader* reader)
 		,0     /* linebuf_alloc */
 		,0     /* len */
 		,{ 0 } /* delim */
+		,{ 0 } /* weak_delim */
 		,{ 0 } /* embedded_breaks */
 		,0     /* rows */
 		,0     /* embedded_breaks */
@@ -89,6 +91,7 @@ struct csv_reader* csv_reader_construct(struct csv_reader* reader)
 	};
 
 	string_construct(&reader->_in->delim);
+	string_construct(&reader->_in->weak_delim);
 	string_construct_from_char_ptr(&reader->_in->embedded_break, "\n");
 
 	return reader;
@@ -120,6 +123,7 @@ unsigned csv_reader_embedded_breaks(struct csv_reader* self)
 void csv_reader_set_delim(struct csv_reader* self, const char* delim)
 {
 	string_strcpy(&self->_in->delim, delim);
+	string_sprintf(&self->_in->weak_delim, "\"%s", delim);
 }
 
 void csv_reader_set_embedded_break(struct csv_reader* self,
@@ -261,21 +265,26 @@ int csv_nparse_to(struct csv_reader *self, struct csv_record *rec, const char* l
 	while(recidx < limit && rec->size < field_limit) {
 		csv_append_empty_field(rec);
 
+		string* field_data = NULL;
+		stringview* field = vec_at(rec->_in->_fields, rec->size-1);
 		int quotes = self->quotes;
-		if (self->quotes != QUOTE_NONE && line[recidx] != '"')
+		if (self->quotes != QUOTE_NONE && line[recidx] != '"') {
 			quotes = QUOTE_NONE;
+		} else {
+			field_data = vec_at(rec->_in->field_data, rec->size-1);
+		}
 
 		switch(quotes) {
 		case QUOTE_ALL:
 			/* Not seeing a point to implementing this for reading. */
 		case QUOTE_RFC4180:
-			ret = csv_parse_rfc4180(self, rec, &line, &recidx, &limit);
+			ret = csv_parse_rfc4180(self, field_data, &line, &recidx, &limit);
 			break;
 		case QUOTE_WEAK:
-			ret = csv_parse_weak(self, rec, &line, &recidx, &limit);
+			ret = csv_parse_weak(self, field_data, &line, &recidx, &limit);
 			break;
 		case QUOTE_NONE:
-			ret = csv_parse_none(self, rec, &line, &recidx, &limit);
+			ret = csv_parse_none(self, field, &line, &recidx, &limit);
 			break;
 		}
 
@@ -328,9 +337,8 @@ int csv_append_line(struct csv_reader* self, string* field, size_t* recidx)
 	return ret;
 }
 
-int csv_parse_rfc4180(struct csv_reader* self, struct csv_record* rec, const char** line, size_t* recidx, unsigned* limit)
+int csv_parse_rfc4180(struct csv_reader* self, string* field_data, const char** line, size_t* recidx, unsigned* limit)
 {
-	string* field_data = vec_at(rec->_in->field_data, rec->size-1);
 	unsigned trailing_space = 0;
 	unsigned nl_count = 0;
 	_Bool keep = true;
@@ -408,127 +416,110 @@ int csv_parse_rfc4180(struct csv_reader* self, struct csv_record* rec, const cha
 	return CSV_GOOD;
 }
 
-int csv_parse_weak(struct csv_reader* self, struct csv_record* rec, const char** line, size_t* recidx, unsigned* limit)
+int csv_parse_weak(struct csv_reader* self, string* field_data, const char** line, size_t* recidx, unsigned* limit)
 {
-	unsigned delim_idx = 0;
-	unsigned last_delim_idx = 0;
-	unsigned on_quote = false;
 	unsigned trailing_space = 0;
-	int nl_count = 0;
-	int append_field = false;
-	int first_char = true;
+	unsigned nl_count = 0;
+	_Bool first_char = true;
 
-	++(*recidx);
+	const char* begin = &(*line)[*recidx];
+	const char* end = memmem(begin,
+	                         *limit - *recidx,
+	                         self->_in->weak_delim.data,
+	                         self->_in->weak_delim.size);
 
-	while (true) {
-		for (; *recidx < limit && (*line)[*recidx] != '\0' && delim_idx != self->_in->delimlen; ++(*recidx)) {
-			if (on_quote && (*line)[*recidx] == self->delimiter[delim_idx]) {
-				++delim_idx;
-			} else {
-				delim_idx = 0;
-				/* Handle trailing space after quote */
-				//if (on_quote && isspace((*line)[*recidx])) {
-				//        ++trailing_space;
-				//} else {
-				//        trailing_space = 0;
-					on_quote = ((*line)[*recidx] == '"');
-				//}
+	while (end == NULL) {
+		end = &(*line)[*limit];
+		if (*(end-1) != '"') {
+			if (self->_in->linebuf == NULL) {
+				return CSV_RESET;
 			}
-			if (!first_char || !self->trim || !isspace((*line)[*recidx])) {
-				rec->_in->buffer[rec->_in->bufidx++] = (*line)[*recidx];
-
-				first_char = false;
-				if (self->trim && isspace((*line)[*recidx]))
-					++trailing_space;
-				else if (on_quote + delim_idx == last_delim_idx)
-					trailing_space = 0;
+			if (++nl_count > CSV_MAX_NEWLINES) {
+				return CSV_RESET;
 			}
-
-			if ((*line)[*recidx] == '\n')
-				++self->_in->embedded_breaks;
-
-			last_delim_idx = delim_idx + on_quote;
-		}
-		if ((*line)[*recidx] == '\0' && !on_quote) {
-			if (++nl_count > CSV_MAX_NEWLINES ||
-			    csv_append_line(self, rec, *recidx, nl_count) == EOF) {
+			int ret = csv_append_line(self, field_data, recidx);
+			if (ret == EOF) {
 				return CSV_RESET;
 			}
 			*line = self->_in->linebuf;
+			begin = &(*line)[*recidx];
+			unsigned old_limit = *limit;
+			*limit = self->_in->linebuf_len;
+			end = memmem(begin + old_limit,
+			             *limit - *recidx - old_limit,
+			             self->_in->weak_delim.data,
+			             self->_in->weak_delim.size);
+		}
+	}
+
+	string_resize(field_data, end - begin);
+	char* result = field_data->data;
+
+	const char* it = begin;
+	for (; it != end; ++it) {
+		if (!first_char
+		 || !self->trim
+		 || !isspace(*it)) {
+			--field_data->size;
 			continue;
 		}
+		*result = *it;
+		++result;
 
-		break;
+		first_char = false;
+		if (self->trim && isspace(*it))
+			++trailing_space;
+		else
+			trailing_space = 0;
 	}
 
-	if (delim_idx == self->_in->delimlen) {
-		/* Handle Trailing delimiter */
-		if (!((*line)[*recidx]) || *recidx == limit)
-			append_field = true;
-		rec->_in->bufidx -= self->_in->delimlen;
-	}
-	rec->_in->bufidx -= trailing_space + 1;
-	rec->_in->buffer[rec->_in->bufidx++] = '\0';
 
-	if (append_field)
-		csv_append_empty_field(rec);
+	if (trailing_space) {
+		string_resize(field_data, field_data->size - trailing_space);
+	}
 
 	self->_in->embedded_breaks += nl_count;
 	return CSV_GOOD;
 }
 
-int csv_parse_none(struct csv_reader* self, struct csv_record* rec, const char** line, size_t* recidx, unsigned limit)
+int csv_parse_none(struct csv_reader* self, stringview* field, const char** line, size_t* recidx, unsigned* limit)
 {
-	unsigned delim_idx = 0;
-	unsigned last_delim_idx = 0;
 	unsigned trailing_space = 0;
-	int append_field = false;
-	int first_char = true;
+	_Bool first_char = true;
 
-	for (; *recidx < limit && (*line)[*recidx] != '\0' && delim_idx != self->_in->delimlen; ++(*recidx)) {
-		if ((*line)[*recidx] == self->delimiter[delim_idx])
-			++delim_idx;
-		else if (delim_idx != 0)
-			delim_idx = ((*line)[*recidx] == self->delimiter[0]) ? 1 : 0;
+	const char* begin = &(*line)[*recidx];
+	const char* end = memmem(begin,
+	                         *limit - *recidx,
+	                         self->_in->weak_delim.data,
+	                         self->_in->weak_delim.size);
+	if (end == NULL) {
+		end = &(*line)[*limit];
+	}
 
-		if (!first_char || !self->trim || !isspace((*line)[*recidx])) {
-			rec->_in->buffer[rec->_in->bufidx++] = (*line)[*recidx];
-
-			first_char = false;
-			if (self->trim && isspace((*line)[*recidx]))
-				++trailing_space;
-			else if (delim_idx == last_delim_idx)
-				trailing_space = 0;
+	const char* it = begin;
+	for (; it != end; ++it) {
+		if (!first_char
+		 || !self->trim
+		 || !isspace(*it)) {
+			++begin;
+			continue;
 		}
 
-
-		if ((*line)[*recidx] == '\n')
-			++self->_in->embedded_breaks;
-
-		last_delim_idx = delim_idx;
+		first_char = false;
+		if (self->trim && isspace(*it))
+			++trailing_space;
+		else
+			trailing_space = 0;
 	}
 
-	if (delim_idx == self->_in->delimlen) {
-		/* Handle Trailing delimiter */
-		if (!((*line)[*recidx]) || *recidx == limit)
-			append_field = true;
-		rec->_in->bufidx -= self->_in->delimlen;
-	}
-
-	rec->_in->bufidx -= trailing_space;
-	rec->_in->buffer[rec->_in->bufidx++] = '\0';
-
-	if (append_field)
-		csv_append_empty_field(rec);
+	stringview_nset(field, begin, end - begin - trailing_space);
 
 	return CSV_GOOD;
 }
 
 void csv_determine_delimiter(struct csv_reader* self, const char* header, unsigned limit)
 {
-	unsigned delimlen = strlen(self->delimiter);
-	if (delimlen) {
-		self->_in->delimlen = delimlen;
+	if (!string_empty(&self->_in->delim)) {
 		return;
 	}
 
@@ -545,9 +536,11 @@ void csv_determine_delimiter(struct csv_reader* self, const char* header, unsign
 		}
 	}
 
-	self->delimiter[0] = delims[sel];
-	self->delimiter[1] = '\0';
-	self->_in->delimlen = 1;
+	char delim[2];
+	delim[0] = delims[sel];
+	delim[1] = '\0';
+
+	csv_reader_set_delim(self, delim);
 }
 
 int csv_reader_open(struct csv_reader* self, const char* file_name)
@@ -569,8 +562,8 @@ int csv_reader_close(struct csv_reader* self)
 int csv_reader_reset(struct csv_reader* self)
 {
 	self->normal = self->_in->normorg;
-	self->delimiter[0] = '\0';
-	self->_in->delimlen = 0;
+	string_clear(&self->_in->delim);
+	string_clear(&self->_in->weak_delim);
 	self->_in->embedded_breaks = 0;
 	self->_in->rows = 0;
 	//self->_in->linebuf[0] = '\0';
