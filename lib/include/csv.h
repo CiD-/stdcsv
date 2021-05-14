@@ -12,11 +12,6 @@ extern "C" {
 #define CSV_BUFFER_FACTOR       128
 #define CSV_MAX_NEWLINES        40
 
-#define QUOTE_ALL         3
-#define QUOTE_RFC4180     2
-#define QUOTE_WEAK        1
-#define QUOTE_NONE        0
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -25,6 +20,13 @@ extern "C" {
 #include <unistd.h>
 #include <limits.h>
 #include <errno.h>
+
+enum quote_style {
+	QUOTE_NONE = 0,
+	QUOTE_WEAK,
+	QUOTE_RFC4180,
+	QUOTE_ALL,
+};
 
 /**
  * CSV Structures
@@ -56,9 +58,7 @@ struct csv_record {
  */
 struct csv_reader {
 	struct csv_read_internal* _in;
-	char delimiter[32];
-	char embedded_break[32];
-	int quotes;
+	enum quote_style quotes;
 	int normal;
 	_Bool failsafe_mode;
 	_Bool trim;
@@ -67,9 +67,7 @@ struct csv_reader {
 struct csv_writer {
 	struct csv_write_internal* _in;
 	FILE* file;
-	char delimiter[32];
-	char line_terminator[3];
-	int quotes;
+	enum quote_style quotes;
 };
 
 /**
@@ -119,6 +117,7 @@ struct csv_record* csv_record_clone(const struct csv_record*);
  * signal handling here.
  */
 struct csv_reader* csv_reader_new();
+struct csv_reader* csv_reader_construct(struct csv_reader*);
 
 /**
  * Relese allocated heap resources
@@ -126,8 +125,12 @@ struct csv_reader* csv_reader_new();
 void csv_reader_free(struct csv_reader*);
 
 /** Accessors **/
-uint csv_reader_row_count(struct csv_reader*);
-uint csv_reader_embedded_breaks(struct csv_reader*);
+unsigned csv_reader_row_count(struct csv_reader*);
+unsigned csv_reader_embedded_breaks(struct csv_reader*);
+
+/** Mutators **/
+void csv_reader_set_delim(struct csv_reader*, const char*);
+void csv_reader_set_embedded_break(struct csv_reader*, const char*);
 
 /**
  * Main accessing function for reading data.

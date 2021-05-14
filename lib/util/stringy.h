@@ -43,11 +43,11 @@ void string_append_stringview(string*, struct stringview*);
 
 /* char interface */
 void string_push_back(string*, char);
-void string_strcat(string*, const char*);
-void string_strncat(string*, const char*, size_t);
-void string_strcpy(string*, const char*);
-void string_strncpy(string*, const char*, size_t);
-void string_sprintf(string* s, const char* fmt, ...);
+size_t string_strcat(string*, const char*);
+size_t string_strcpy(string*, const char*);
+size_t string_strncpy(string*, const char*, size_t);
+size_t string_sprintf(string* s, const char* fmt, ...);
+const char* string_c_str(string* s);
 
 /* string iterface */
 void string_copy(string* dest, string* src);
