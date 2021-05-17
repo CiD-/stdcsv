@@ -29,18 +29,19 @@ struct csv_writer* csv_writer_construct(struct csv_writer* self)
 	self->_in = malloc_(sizeof(*self->_in));
 	*self->_in = (struct csv_write_internal) {
 		 stdout /* file */
-		,NULL   /* buffer */
-		,0      /* bufsize */
 		,NULL   /* tmp_node */
 		,NULL   /* tempname */
 		,NULL   /* filename */
 		,NULL   /* filename_org */
+		,{ 0 }  /* buffer */
 		,{ 0 }  /* delim */
+		,{ 0 }  /* rec_terminator */
 		,0      /* record_len */
 	};
 
+	string_construct(&self->_in->buffer);
 	string_construct(&self->_in->delim);
-	increase_buffer(&self->_in->buffer, &self->_in->bufsize);
+	string_construct_from_char_ptr(&self->_in->rec_terminator, "\n");
 
 	return self;
 }
@@ -53,7 +54,12 @@ void csv_writer_free(struct csv_writer* self)
 
 void csv_writer_destroy(struct csv_writer* self)
 {
-	free_(self->_in->buffer);
+	delete_ (string, self->_in->tempname);
+	delete_ (string, self->_in->filename);
+	delete_ (string, self->_in->filename_org);
+	string_destroy(&self->_in->buffer);
+	string_destroy(&self->_in->delim);
+	string_destroy(&self->_in->rec_terminator);
 	free_(self->_in);
 }
 
@@ -81,11 +87,11 @@ void csv_write_record(struct csv_writer* self, struct csv_record* rec)
 	int i = 0;
 	for (; i < rec->size; ++i) {
 		if (i)
-			fputs(self->delimiter, self->file);
-		csv_write_field(self, rec->fields[i]);
+			fputs(string_c_str(&self->_in->delim), self->_in->file);
+		csv_write_field(self, &rec->fields[i]);
 	}
 
-	fputs(self->line_terminator, self->file);
+	fputs(self->_in->rec_terminator, self->_in->file);
 }
 
 int csv_writer_reset(struct csv_writer* self)

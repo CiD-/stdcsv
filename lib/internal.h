@@ -43,13 +43,13 @@ struct csv_read_internal {
 
 struct csv_write_internal {
 	FILE* file;
-	char* buffer;
-	size_t bufsize;
 	queue* tmp_node;
 	string* tempname;
 	string* filename;
 	string* filename_org;
+	string buffer;
 	string delim;
+	string rec_terminator;
 	int reclen;
 };
 

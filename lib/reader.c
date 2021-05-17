@@ -99,9 +99,17 @@ struct csv_reader* csv_reader_construct(struct csv_reader* reader)
 
 void csv_reader_free(struct csv_reader* self)
 {
+	csv_reader_destroy(self);
+	free_(self);
+}
+
+void csv_reader_destroy(struct csv_reader* self)
+{
 	free_(self->_in->linebuf);
 	free_(self->_in);
-	free_(self);
+	string_destroy(&self->_in->delim);
+	string_destroy(&self->_in->weak_delim);
+	string_destroy(&self->_in->embedded_break);
 }
 
 /**

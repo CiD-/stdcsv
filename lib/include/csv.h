@@ -122,6 +122,7 @@ struct csv_reader* csv_reader_construct(struct csv_reader*);
  * Relese allocated heap resources
  */
 void csv_reader_free(struct csv_reader*);
+void csv_reader_destroy(struct csv_reader* self);
 
 /** Accessors **/
 unsigned csv_reader_row_count(struct csv_reader*);
