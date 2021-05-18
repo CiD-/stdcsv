@@ -1,6 +1,7 @@
 #include "csvsignal.h"
 #include <string.h>
 #include <stdio.h>
+#include "util/stringy.h"
 #include "util/util.h"
 #include "misc.h"
 
@@ -35,14 +36,15 @@ void cleanexit()
 	exit(EXIT_FAILURE);
 }
 
-queue* tmp_push(const char* tmp_file)
+queue* tmp_push(void* tmp_file)
 {
-	return queue_enqueue(&_tmp_file_head, strdup(tmp_file));
+	return queue_enqueue(&_tmp_file_head, tmp_file);
 }
 
 void tmp_remove_node(queue* node)
 {
-	queue_remove(&_tmp_file_head, node);
+	string* tmp = queue_remove(&_tmp_file_head, node);
+	delete_ (string, tmp);
 }
 
 void tmp_remove_file(const char* tmp_file)
@@ -54,9 +56,9 @@ void tmp_remove_file(const char* tmp_file)
 void tmp_removeall()
 {
 	while (_tmp_file_head) {
-		const char* data = queue_dequeue(&_tmp_file_head);
-		tmp_remove_file(data);
-		free_(data);
+		string* tmp = queue_dequeue(&_tmp_file_head);
+		tmp_remove_file(string_c_str(tmp));
+		delete_ (string, tmp);
 	}
 }
 

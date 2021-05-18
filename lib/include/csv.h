@@ -189,9 +189,19 @@ void csv_writer_free(struct csv_writer*);
 void csv_writer_destroy(struct csv_writer*);
 
 /**
- * return TRUE if writer has open file
+ * return true if writer has open file
  */
 int csv_writer_isopen(struct csv_writer*);
+
+/**
+ * Set output delimiter
+ */
+void csv_writer_set_delim(struct csv_writer*, const char*);
+
+/**
+ * set output record terminator
+ */
+void csv_writer_set_line_ending(struct csv_writer*, const char*);
 
 /**
  * Open a file for writing csv conents

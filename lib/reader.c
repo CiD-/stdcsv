@@ -105,11 +105,11 @@ void csv_reader_free(struct csv_reader* self)
 
 void csv_reader_destroy(struct csv_reader* self)
 {
-	free_(self->_in->linebuf);
-	free_(self->_in);
 	string_destroy(&self->_in->delim);
 	string_destroy(&self->_in->weak_delim);
 	string_destroy(&self->_in->embedded_break);
+	free_(self->_in->linebuf);
+	free_(self->_in);
 }
 
 /**
@@ -306,8 +306,8 @@ int csv_nparse_to(struct csv_reader *self, struct csv_record *rec, const char* l
 	rec->rec = line;
 	if (self->_in->linebuf != NULL) {
 		rec->reclen = self->_in->linebuf_len;
-	} else if (rec->size < field_limit){
-		rec->reclen = recidx + strlen(&self->_in->linebuf[recidx]);
+	//} else if (rec->size < field_limit){
+	//	rec->reclen = recidx + strlen(&self->_in->linebuf[recidx]);
 	} else {
 		rec->reclen = recidx;
 	}
@@ -420,6 +420,8 @@ int csv_parse_rfc4180(struct csv_reader* self, string* field_data, const char** 
 		string_resize(field_data, field_data->size - trailing_space);
 	}
 
+	*recidx += (end - begin);
+
 	self->_in->embedded_breaks += nl_count;
 	return CSV_GOOD;
 }
@@ -466,8 +468,8 @@ int csv_parse_weak(struct csv_reader* self, string* field_data, const char** lin
 	const char* it = begin;
 	for (; it != end; ++it) {
 		if (!first_char
-		 || !self->trim
-		 || !isspace(*it)) {
+		 && !self->trim
+		 && !isspace(*it)) {
 			--field_data->size;
 			continue;
 		}
@@ -485,6 +487,8 @@ int csv_parse_weak(struct csv_reader* self, string* field_data, const char** lin
 	if (trailing_space) {
 		string_resize(field_data, field_data->size - trailing_space);
 	}
+
+	*recidx += (end - begin);
 
 	self->_in->embedded_breaks += nl_count;
 	return CSV_GOOD;
@@ -506,10 +510,11 @@ int csv_parse_none(struct csv_reader* self, stringview* field, const char** line
 
 	const char* it = begin;
 	for (; it != end; ++it) {
-		if (!first_char
-		 || !self->trim
-		 || !isspace(*it)) {
+		if (first_char
+		 && self->trim
+		 && isspace(*it)) {
 			++begin;
+			++(*recidx);
 			continue;
 		}
 
@@ -521,6 +526,8 @@ int csv_parse_none(struct csv_reader* self, stringview* field, const char** line
 	}
 
 	stringview_nset(field, begin, end - begin - trailing_space);
+
+	*recidx += (end - begin);
 
 	return CSV_GOOD;
 }

@@ -6,7 +6,8 @@
  * Error Handlers
  */
 
-static queue* _err_str_head;
+
+static queue* _err_str_head = NULL;
 
 void err_remove(queue* node)
 {
@@ -15,7 +16,7 @@ void err_remove(queue* node)
 
 queue* err_push(const char* err)
 {
-	return queue_enqueue(&_err_str_head, (void*)err);
+	return queue_enqueue(&_err_str_head, (void*) err);
 }
 
 void err_printall()

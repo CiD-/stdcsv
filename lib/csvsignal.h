@@ -19,7 +19,7 @@ void cleanexit();
 /**
  * Add temp file
  */
-struct queue* tmp_push(const char* tmp_file);
+struct queue* tmp_push(void* tmp_file);
 
 /**
  * Remove temp node only

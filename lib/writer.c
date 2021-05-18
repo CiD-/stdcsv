@@ -54,7 +54,7 @@ void csv_writer_free(struct csv_writer* self)
 
 void csv_writer_destroy(struct csv_writer* self)
 {
-	delete_ (string, self->_in->tempname);
+	tmp_remove_node(self->_in->tmp_node);
 	delete_ (string, self->_in->filename);
 	delete_ (string, self->_in->filename_org);
 	string_destroy(&self->_in->buffer);
@@ -91,33 +91,33 @@ void csv_write_record(struct csv_writer* self, struct csv_record* rec)
 		csv_write_field(self, &rec->fields[i]);
 	}
 
-	fputs(self->_in->rec_terminator, self->_in->file);
+	fputs(string_c_str(&self->_in->rec_terminator), self->_in->file);
 }
 
 int csv_writer_reset(struct csv_writer* self)
 {
-	csvfail_if_(self->file == stdout, "Cannot reset stdout");
-	csvfail_if_(!self->file, "No file to reset");
-	csvfail_if_(fclose(self->file) == EOF, self->_in->tempname);
-	//self->file = NULL;
-	self->file = fopen(self->_in->tempname, "w");
-	csvfail_if_(!self->file, self->_in->tempname);
+	csvfail_if_(self->_in->file == stdout, "Cannot reset stdout");
+	csvfail_if_(!self->_in->file, "No file to reset");
+	csvfail_if_(fclose(self->_in->file) == EOF,
+		    string_c_str(self->_in->tempname));
+	//self->_in->file = NULL;
+	self->_in->file = fopen(string_c_str(self->_in->tempname), "w");
+	csvfail_if_(!self->_in->file, string_c_str(self->_in->tempname));
 
 	return 0;
 }
 
 int csv_writer_mktmp(struct csv_writer* self)
 {
-	char filename_cp[PATH_MAX] = "";
-	strncpy_(filename_cp, self->_in->filename, PATH_MAX);
+	char* filename_cp = strdup(string_c_str(self->_in->filename));
 
 	char* targetdir = dirname(filename_cp);
-	strncpy_(self->_in->tempname, targetdir, PATH_MAX);
-	strcat(self->_in->tempname, "/csv_XXXXXX");
+	self->_in->tempname = string_from_char_ptr(targetdir);
+	string_strcat(self->_in->tempname, "/csv_XXXXXX");
 
-	int fd = mkstemp(self->_in->tempname);
-	self->file = fdopen(fd, "w");
-	csvfail_if_(!self->file, self->_in->tempname);
+	int fd = mkstemp(self->_in->tempname->data);
+	self->_in->file = fdopen(fd, "w");
+	csvfail_if_(!self->_in->file, string_c_str(self->_in->tempname));
 
 	self->_in->tmp_node = tmp_push(self->_in->tempname);
 
@@ -126,47 +126,56 @@ int csv_writer_mktmp(struct csv_writer* self)
 
 int csv_writer_isopen(struct csv_writer* self)
 {
-	if (self->file && self->file != stdout)
-		return true;
-	return false;
+	return (self->_in->file && self->_in->file != stdout);
+}
+
+void csv_writer_set_delim(struct csv_writer* self, const char* delim)
+{
+	string_strcpy(&self->_in->delim, delim);
+}
+
+void csv_writer_set_line_ending(struct csv_writer* self, const char* ending)
+{
+	string_strcpy(&self->_in->rec_terminator, ending);
 }
 
 int csv_writer_open(struct csv_writer* self, const char* filename)
 {
 	int ret = 0;
-	if(!csv_writer_isopen(self))
+	if (!csv_writer_isopen(self))
 		ret = csv_writer_mktmp(self);
-	strncpy_(self->_in->filename, filename, PATH_MAX);
+	self->_in->filename = string_from_char_ptr(filename);
 	return ret;
 }
 
 int csv_writer_close(struct csv_writer* self)
 {
-	if (self->file == stdout)
+	if (self->_in->file == stdout)
 		return 0;
 
-	csvfail_if_(fclose(self->file) == EOF, self->_in->tempname);
-	self->file = NULL;
+	csvfail_if_(fclose(self->_in->file) == EOF,
+			   string_c_str(self->_in->tempname));
+	self->_in->file = NULL;
 
-	if (self->_in->filename[0] != '\0') {
-		int ret = rename(self->_in->tempname, self->_in->filename);
-		csvfail_if_(ret, self->_in->tempname);
-		ret = chmod(self->_in->filename, 0666);
-		csvfail_if_(ret, self->_in->filename);
+	const char* file = string_c_str(self->_in->filename);
+	const char* tmp = string_c_str(self->_in->tempname);
+
+	if (!string_empty(self->_in->filename)) {
+		csvfail_if_(rename(tmp, file), tmp);
+		csvfail_if_(chmod(file, 0666), file);
 		tmp_remove_node(self->_in->tmp_node);
 	} else {
-		FILE* dump_file = fopen(self->_in->tempname, "r");
-		csvfail_if_(!dump_file, self->_in->tempname);
+		FILE* dump_file = fopen(tmp, "r");
+		csvfail_if_(!dump_file, tmp);
 
 		char c = '\0';
 		while ((c = getc(dump_file)) != EOF)
 			putchar(c);
 
-		csvfail_if_(fclose(dump_file) == EOF, self->_in->tempname);
+		csvfail_if_(fclose(dump_file) == EOF, tmp);
 		tmp_remove_file(self->_in->tmp_node->data);
 		tmp_remove_node(self->_in->tmp_node);
 	}
-
 	return 0;
 }
 
