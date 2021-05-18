@@ -37,7 +37,8 @@ struct csv_record* csv_record_construct(struct csv_record* self)
 	*self->_in = (struct csv_record_internal) {
 		new_t_(vec, string),           /* field_data */
 		new_t_(vec, struct csv_field), /* _fields */
-		0
+		0,                             /* rec_alloc */
+		0,                             /* allocated */
 	};
 
 	return self;
@@ -90,7 +91,8 @@ struct csv_record* csv_record_clone(const struct csv_record* src)
 	*dest->_in = (struct csv_record_internal) {
 		new_t_(vec, string),           /* field_data */
 		new_t_(vec, struct csv_field), /* _fields */
-		src->size                      /* allocated */
+		0,                             /* rec_alloc */
+		src->size,                     /* allocated */
 	};
 
 	vec_resize(dest->_in->_fields, src->size);

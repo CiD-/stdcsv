@@ -46,8 +46,8 @@ struct csv_field {
 struct csv_record {
 	struct csv_record_internal* _in;
 	struct csv_field* fields;
-	const char* rec;
-	unsigned reclen;
+	char* rec;
+	size_t reclen;
 	int size;
 };
 

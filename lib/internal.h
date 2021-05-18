@@ -18,16 +18,12 @@
 struct csv_record_internal {
 	vec* field_data;     /* vec<string> */
 	vec* _fields;        /* vec<struct csv_field> */
-	unsigned allocated;
-	unsigned org_limit;
+	size_t rec_alloc;
+	unsigned field_alloc;
 };
 
 struct csv_read_internal {
 	FILE* file;
-	char* linebuf;
-	size_t linebuf_alloc;
-	size_t linebuf_len; /* what is this? */
-
 	string delim;
 	string weak_delim;
 	string embedded_break;
