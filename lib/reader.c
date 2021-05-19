@@ -36,18 +36,14 @@ void csv_record_grow(struct csv_record*);
  * csv_append_line is used to retrieve another line
  * of input for an in-line break.
  */
-int csv_append_line(struct csv_reader* self,
-		   struct csv_record*,
-		   string* field, 
-		   size_t* recidx);
-
+int csv_append_line(struct csv_reader* self, struct csv_record*);
 /**
  * Simple CSV parsing. Disregard all quotes.
  */
 int csv_parse_none(struct csv_reader*,
-		   stringview* field, 
-		   const char** line, 
-		   size_t* recidx, 
+		   struct csv_record*,
+		   const char** line,
+		   size_t* recidx,
 		   unsigned* limit);
 
 /**
@@ -56,10 +52,10 @@ int csv_parse_none(struct csv_reader*,
  * Leading spaces will cause the field to not
  * be treated as qualified.
  */
-int csv_parse_weak(struct csv_reader*, 
-		   struct csv_record*, 
-		   const char** line, 
-		   size_t* recidx, 
+int csv_parse_weak(struct csv_reader*,
+		   struct csv_record*,
+		   const char** line,
+		   size_t* recidx,
 		   unsigned* limit);
 
 /**
@@ -68,8 +64,8 @@ int csv_parse_weak(struct csv_reader*,
  */
 int csv_parse_rfc4180(struct csv_reader* self,
 		      struct csv_record*,
-		      const char** line, 
-		      size_t* recidx, 
+		      const char** line,
+		      size_t* recidx,
 		      unsigned* limit);
 
 
@@ -281,7 +277,7 @@ int csv_nparse_to(struct csv_reader *self, struct csv_record *rec, const char* l
 		/* I'm not making any promises... */
 		rec->rec = (char*)line; /* meh */
 	}
-	
+
 	if (limit == UINT_MAX) {
 		limit = rec->reclen;
 	}
@@ -298,7 +294,6 @@ int csv_nparse_to(struct csv_reader *self, struct csv_record *rec, const char* l
 		}
 		csv_append_empty_field(rec);
 
-		stringview* field = vec_at(rec->_in->_fields, rec->size-1);
 		int quotes = self->quotes;
 		if (quotes != QUOTE_NONE && line[recidx] != '"') {
 			quotes = QUOTE_NONE;
@@ -314,7 +309,7 @@ int csv_nparse_to(struct csv_reader *self, struct csv_record *rec, const char* l
 			ret = csv_parse_weak(self, rec, &line, &recidx, &limit);
 			break;
 		case QUOTE_NONE:
-			ret = csv_parse_none(self, field, &line, &recidx, &limit);
+			ret = csv_parse_none(self, rec, &line, &recidx, &limit);
 			break;
 		}
 
@@ -340,11 +335,11 @@ int csv_nparse_to(struct csv_reader *self, struct csv_record *rec, const char* l
 }
 
 int csv_append_line(struct csv_reader* self,
-		    struct csv_record* rec, 
-		    string* field, 
-		    size_t* recidx)
+		    struct csv_record* rec)
 {
 	int ret = 0;
+
+	const char* old_rec = rec->rec;
 	if (!self->_in->is_mmap) {
 		ret = sappline(self->_in->file,
 			      &rec->rec,
@@ -352,19 +347,37 @@ int csv_append_line(struct csv_reader* self,
 			      &rec->reclen);
 	}
 
-	string_append(field, &self->_in->embedded_break);
-	*recidx += self->_in->embedded_break.size;
+	if (old_rec == rec->rec) {
+		return ret;
+	}
+
+	/* If we have reached this spot, there was a realloc
+	 * that moved the location of the record.  Any fields
+	 * that were pointing to the record are now invalid
+	 * and must be fixed.
+	 */
+	unsigned i = 0;
+	for (; i < rec->_in->_fields->size; ++i) {
+		struct csv_field* field = vec_at(rec->_in->_fields, i);
+		string* field_data = vec_at(rec->_in->field_data, i);
+		if (field->data == field_data->data) {
+			continue;
+		}
+		size_t offset = field->data - old_rec;
+		field->data = rec->rec + offset;
+	}
 
 	return ret;
 }
 
 int csv_parse_rfc4180(struct csv_reader* self,
 	              struct csv_record* rec,
-	              const char** line, 
-		      size_t* recidx, 
-		      unsigned* limit)
+	              const char** line,
+	              size_t* recidx,
+	              unsigned* limit)
 {
 	string* field_data = vec_at(rec->_in->field_data, rec->size-1);
+	string_clear(field_data);
 
 	unsigned trailing_space = 0;
 	unsigned nl_count = 0;
@@ -372,55 +385,63 @@ int csv_parse_rfc4180(struct csv_reader* self,
 	_Bool first_char = true;
 	_Bool last_was_quote = false;
 	_Bool qualified = true;
+	_Bool delim_skip = false;
 
 	const char* begin = &(*line)[++(*recidx)];
+	const char* ptr = begin;
 	const char* end = NULL;
+	const char* rec_end = &(*line)[*limit];
 
-	for (*recidx += 1; *recidx < *limit; ) {
-		end = memmem(begin,
-		             *limit - *recidx,
-		             self->_in->delim.data,
-		             self->_in->delim.size);
+	for (;;) {
+		for (; qualified && end != rec_end;
+		       ptr = end + self->_in->delim.size) {
+			end = memmem(ptr,
+			             *limit - *recidx,
+			             self->_in->delim.data,
+			             self->_in->delim.size);
 
-		if (end == NULL) {
-			end = &(*line)[*limit];
-		}
+			if (!delim_skip && ptr != begin) {
+				string_append(field_data, &self->_in->delim);
+			}
 
-		string_resize(field_data, end - begin);
-		char* result = field_data->data;
+			delim_skip = (end == NULL);
+			if (delim_skip) {
+				end = rec_end;
+			}
+			vec_reserve(field_data, end - begin);
 
-		const char* it = begin;
-		for (; it != end; ++it) {
-			keep = true;
-			if (qualified) {
-				qualified = (*it != '"');
-				if (!qualified) {
-					keep = false;
-					last_was_quote = true;
+			const char* it = ptr;
+			for (; it < end; ++it) {
+				keep = true;
+				if (qualified) {
+					qualified = (*it != '"');
+					if (!qualified) {
+						keep = false;
+						last_was_quote = true;
+					}
+				} else {
+					qualified = (*it == '"');
+					if (qualified && !last_was_quote)
+						keep = false;
+					last_was_quote = false;
 				}
-			} else {
-				qualified = (*it == '"');
-				if (qualified && !last_was_quote)
-					keep = false;
-				last_was_quote = false;
-			}
-			if (!keep || (first_char && self->trim && isspace(*it))) {
-				--field_data->size;
-				continue;
-			}
-			*result = *it;
-			++result;
+				if (!keep || (first_char
+					   && self->trim
+					   && isspace(*it))) {
+					continue;
+				}
+				string_push_back(field_data, *it);
 
-			first_char = false;
-			if (self->trim && isspace(*it))
-				++trailing_space;
-			else
-				trailing_space = 0;
+				first_char = false;
+				if (self->trim && isspace(*it))
+					++trailing_space;
+				else
+					trailing_space = 0;
+			}
 		}
 
-		if (!qualified) {
+		if (!qualified)
 			break;
-		}
 
 		/** In-line break found **/
 		if (qualified && !rec->_in->rec_alloc) {
@@ -430,17 +451,24 @@ int csv_parse_rfc4180(struct csv_reader* self,
 		if (++nl_count > CSV_MAX_NEWLINES) {
 			return CSV_RESET;
 		}
-		int ret = csv_append_line(self, rec, field_data, recidx);
+		int ret = csv_append_line(self, rec);
+		string_append(field_data, &self->_in->embedded_break);
 		if (ret == EOF) {
 			return CSV_RESET;
 		}
 		*line = rec->rec;
+		begin = &(*line)[*recidx];
+		ptr = &(*line)[*limit+1];
 		*limit = rec->reclen;
+		rec_end = &(*line)[*limit];
 	}
 
 	if (trailing_space) {
 		string_resize(field_data, field_data->size - trailing_space);
 	}
+	struct csv_field* field = vec_at(rec->_in->_fields, rec->size-1);
+	field->data = field_data->data;
+	field->len = field_data->size;
 
 	*recidx += (end - begin);
 
@@ -450,16 +478,17 @@ int csv_parse_rfc4180(struct csv_reader* self,
 
 int csv_parse_weak(struct csv_reader* self,
 	           struct csv_record* rec,
-		   const char** line, 
-		   size_t* recidx, 
+		   const char** line,
+		   size_t* recidx,
 		   unsigned* limit)
 {
 	string* field_data = vec_at(rec->_in->field_data, rec->size-1);
+	string_clear(field_data);
 	unsigned trailing_space = 0;
 	unsigned nl_count = 0;
 	_Bool first_char = true;
 
-	const char* begin = &(*line)[*recidx];
+	const char* begin = &(*line)[++(*recidx)];
 	const char* end = memmem(begin,
 	                         *limit - *recidx,
 	                         self->_in->weak_delim.data,
@@ -468,7 +497,8 @@ int csv_parse_weak(struct csv_reader* self,
 	while (end == NULL) {
 		end = &(*line)[*limit];
 		/* Quote before EOL */
-		if (*(end-1) == '"') {
+		if (*(end-1) == '"' && begin != end) {
+			--end;
 			break;
 		}
 
@@ -481,7 +511,7 @@ int csv_parse_weak(struct csv_reader* self,
 		if (++nl_count > CSV_MAX_NEWLINES) {
 			return CSV_RESET;
 		}
-		int ret = csv_append_line(self, rec ,field_data, recidx);
+		int ret = csv_append_line(self, rec);
 
 		/* Hit EOF before finishing record */
 		if (ret == EOF) {
@@ -491,26 +521,23 @@ int csv_parse_weak(struct csv_reader* self,
 		begin = &(*line)[*recidx];
 		unsigned old_limit = *limit;
 		*limit = rec->reclen;
-		end = memmem(begin + old_limit,
-		             *limit - *recidx - old_limit,
+		end = memmem(*line + old_limit,
+		             *limit - old_limit,
 		             self->_in->weak_delim.data,
 		             self->_in->weak_delim.size);
-		
+
 	}
 
-	string_resize(field_data, end - begin);
-	char* result = field_data->data;
+	vec_reserve(field_data, end - begin);
 
 	const char* it = begin;
-	for (; it != end; ++it) {
-		if (!first_char
-		 && !self->trim
-		 && !isspace(*it)) {
-			--field_data->size;
+	for (; it < end; ++it) {
+		if (first_char
+		 && self->trim
+		 && isspace(*it)) {
 			continue;
 		}
-		*result = *it;
-		++result;
+		string_push_back(field_data, *it);
 
 		first_char = false;
 		if (self->trim && isspace(*it))
@@ -523,6 +550,9 @@ int csv_parse_weak(struct csv_reader* self,
 	if (trailing_space) {
 		string_resize(field_data, field_data->size - trailing_space);
 	}
+	struct csv_field* field = vec_at(rec->_in->_fields, rec->size-1);
+	field->data = field_data->data;
+	field->len = field_data->size;
 
 	/* + 1 because we treated " as part of delimiter */
 	*recidx += (end - begin) + 1;
@@ -531,7 +561,11 @@ int csv_parse_weak(struct csv_reader* self,
 	return CSV_GOOD;
 }
 
-int csv_parse_none(struct csv_reader* self, stringview* field, const char** line, size_t* recidx, unsigned* limit)
+int csv_parse_none(struct csv_reader* self,
+		   struct csv_record* rec,
+		   const char** line,
+		   size_t* recidx,
+		   unsigned* limit)
 {
 	unsigned trailing_space = 0;
 	_Bool first_char = true;
@@ -562,7 +596,9 @@ int csv_parse_none(struct csv_reader* self, stringview* field, const char** line
 			trailing_space = 0;
 	}
 
-	stringview_nset(field, begin, end - begin - trailing_space);
+	struct csv_field* field = vec_at(rec->_in->_fields, rec->size-1);
+	field->data = begin;
+        field->len = end - begin - trailing_space;
 
 	*recidx += (end - begin);
 

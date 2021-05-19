@@ -67,7 +67,14 @@ int _getline_runner(FILE* f, char** buf, size_t* buflen, size_t* len, size_t off
 
 int sappline(FILE *f, char **buf, size_t* buflen, size_t* len)
 {
-	return _getline_runner(f, buf, buflen, len, strlen(*buf));
+	if (*len+1 > *buflen) {
+		increase_buffer(buf, buflen);
+	}
+	char* end = *buf + *len;
+	*end = '\n';
+	++(*len);
+
+	return _getline_runner(f, buf, buflen, len, *len);
 }
 
 int sgetline(FILE *f, char **buf, size_t* buflen, size_t* len)

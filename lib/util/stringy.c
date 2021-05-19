@@ -4,12 +4,13 @@
 #include "stringview.h"
 #include "util.h"
 
-string* string_construct(string* string)
+#define _null_terminate_(s_) *((char*)vec_end(s_)) = '\0'
+
+string* string_construct(string* s)
 {
-	string = vec_construct(string, 1);
-	char* s = string->data;
-	s[0] = '\0';
-	return string;
+	s = vec_construct(s, 1);
+	_null_terminate_(s);
+	return s;
 }
 
 string* string_from_string(string* src)
@@ -89,7 +90,7 @@ void string_append_stringview(string* dest, struct stringview* sv)
 	vec_resize(dest, dest->size + sv->len);
 	void* end = vec_at(dest, index);
 	memcpy(end, sv->data, sv->len);
-	((char*) dest->data)[dest->size] = '\0';
+	_null_terminate_(dest);
 }
 
 void string_push_back(string* s, char c)
@@ -109,10 +110,23 @@ size_t string_strcat(string* dest, const char* src)
 	return len;
 }
 
+size_t string_strncat(string* dest, const char* src, size_t n)
+{
+	size_t len = strnlen(src, n);
+
+	size_t old_size = dest->size;
+	string_resize(dest, dest->size + len);
+	char* end = vec_at(dest, old_size);
+	memcpy(end, src, len);
+	_null_terminate_(dest);
+
+	return dest->size - old_size;
+}
+
 size_t string_strcpy(string* dest, const char* src)
 {
 	size_t len = strlen(src);
-	vec_resize(dest, len);
+	string_resize(dest, len);
 	memcpy(dest->data, src, len + 1);
 	return len;
 }
@@ -124,8 +138,8 @@ size_t string_strncpy(string* dest, const char* src, size_t limit)
 	for (; src[i] != '\0' && i < limit; ++i) {
 		((char*)dest->data)[i] = src[i];
 	}
-	((char*) dest->data)[i] = '\0';
 	string_resize(dest, i-1);
+	_null_terminate_(dest);
 	return i-1;
 }
 
@@ -148,15 +162,21 @@ const char* string_c_str(string* s)
 	return (const char*) s->data;
 }
 
+void string_clear(string* s)
+{
+	vec_clear(s);
+	_null_terminate_(s);
+}
+
 void string_copy(string* dest, string* src)
 {
 	vec_resize(dest, src->size);
 	memcpy(dest->data, src->data, src->size);
-	((char*) dest->data)[dest->size] = '\0';
+	_null_terminate_(dest);
 }
 
 void string_resize(string* s, size_t n)
 {
 	vec_resize(s, n);
-	((char*) s->data)[n] = '\0';
+	_null_terminate_(s);
 }
