@@ -32,7 +32,6 @@ enum quote_style {
  * CSV Structures
  */
 
-/* Forward declaration of internal structures */
 struct csv_record_internal;
 struct csv_read_internal;
 struct csv_write_internal;
@@ -118,9 +117,6 @@ struct csv_record* csv_record_clone(const struct csv_record*);
 struct csv_reader* csv_reader_new();
 struct csv_reader* csv_reader_construct(struct csv_reader*);
 
-/**
- * Relese allocated heap resources
- */
 void csv_reader_free(struct csv_reader*);
 void csv_reader_destroy(struct csv_reader* self);
 
@@ -136,9 +132,7 @@ void csv_reader_set_embedded_break(struct csv_reader*, const char*);
  * Main accessing function for reading data.
  */
 int csv_get_record(struct csv_reader*, struct csv_record*);
-int csv_nget_record(struct csv_reader*, struct csv_record*, unsigned char_limit);
 int csv_get_record_to(struct csv_reader*, struct csv_record*, unsigned field_limit);
-int csv_nget_record_to(struct csv_reader*, struct csv_record*, unsigned char_limit, unsigned field_limit);
 
 /**
  * Reset statistics. If their is an associated file
@@ -150,8 +144,12 @@ int csv_reader_reset(struct csv_reader*);
  * Open a csv file for reading.  This file will close itself
  * when reading reaches the end of the file.
  */
-int csv_reader_open(struct csv_reader*, const char* fileName);
+int csv_reader_open(struct csv_reader*, const char* file_name);
+int csv_reader_open_mmap(struct csv_reader*, const char* file_name);
 
+int csv_reader_seek(struct csv_reader*, size_t offset);
+/* mmap only */
+int csv_reader_goto(struct csv_reader*, const char*);
 /**
  * This function is available but is called internally
  * when the end of the file has been reached.

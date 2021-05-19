@@ -16,6 +16,7 @@ static const char* helpString =
 "\n-f|--failsafe             Use failsafe mode (more info below)."
 "\n-h|--help                 Print this help menu."
 "\n-i|--in-place             Files edited in place. This will not work for stdin."
+"\n-m|--mmap                 Prefer to read via mmap."
 "\n-M|--cr                   Output will have Macintosh line endings."
 "\n-n|--normalize            Output field count will match header."
 "\n-N|--num-fields arg       Specify number of output fields (Implies -n)"
@@ -50,9 +51,11 @@ typedef struct csv_reader csv_reader;
 typedef struct csv_writer csv_writer;
 typedef struct csv_record csv_record;
 
+static _Bool prefer_mmap = false;
+
 /** Conflicting Options **/
-static int in_place_edit = 0;
-static int set_output_file = 0;
+static _Bool in_place_edit = false;
+static _Bool set_output_file = false;
 
 void parseargs(char c, csv_reader* reader, csv_writer* writer)
 {
@@ -70,6 +73,9 @@ void parseargs(char c, csv_reader* reader, csv_writer* writer)
 	case 'h': /* help */
 		puts(helpString);
 		exit(EXIT_SUCCESS);
+	case 'm':
+		prefer_mmap = true;
+		break;
 	case 'n': /* normalize */
 		reader->normal = CSV_NORMAL_OPEN;
 		break;
@@ -188,6 +194,7 @@ int main (int argc, char **argv)
 	{
 		/* long option, (no) arg, 0, short option */
 		{"help", no_argument, 0, 'h'},
+		{"mmap", no_argument, 0, 'm'},
 		{"normalize", no_argument, 0, 'n'},
 		{"num-fields", required_argument, 0, 'N'},
 		{"failsafe", no_argument, 0, 'f'},
@@ -214,7 +221,7 @@ int main (int argc, char **argv)
 	csv_writer* writer = csv_writer_new();
 	csv_record* record = csv_record_new();
 
-	while ( (c = getopt_long (argc, argv, "cCfhMnirtWd:D:N:o:Q:q:R:x:",
+	while ( (c = getopt_long (argc, argv, "cCfhmMnirtWd:D:N:o:Q:q:R:x:",
 				  long_options, &option_index)) != -1)
 		parseargs(c, reader, writer);
 
@@ -233,7 +240,13 @@ int main (int argc, char **argv)
 		 */
 		if (optind != argc && ret != CSV_RESET) {
 			/** Open the file for reading **/
-			if (csv_reader_open(reader, argv[optind]) == CSV_FAIL)
+
+			int ret = 0;
+			if (prefer_mmap)
+				ret = csv_reader_open_mmap(reader, argv[optind]);
+			else
+				ret = csv_reader_open(reader, argv[optind]);
+			if (ret == CSV_FAIL)
 				csv_perror_exit();
 
 			/* If in_place_edit, open a writer with the
@@ -264,7 +277,7 @@ int main (int argc, char **argv)
 				csv_perror_exit();
 			break;
 		case CSV_FAIL:
-			optind = argc; /* Implicit fall-through */
+			optind = argc; /* no break intentional */
 		default:
 			if (csv_writer_close(writer) == CSV_FAIL)
 				csv_perror_exit();

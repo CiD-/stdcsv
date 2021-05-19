@@ -2,6 +2,9 @@
 #define _GNU_SOURCE
 #endif
 
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "csv.h"
 #include "csvsignal.h"
 #include "csverror.h"
@@ -92,6 +95,9 @@ struct csv_reader* csv_reader_construct(struct csv_reader* reader)
 		,{ 0 } /* delim */
 		,{ 0 } /* weak_delim */
 		,{ 0 } /* embedded_breaks */
+		,NULL  /* mmap_ptr */
+		,0     /* file_size */
+		,0     /* fd */
 		,0     /* rows */
 		,0     /* embedded_breaks */
 		,0     /* normorg */
@@ -163,29 +169,24 @@ void csv_record_grow(struct csv_record* self)
 
 int csv_get_record(struct csv_reader* self, struct csv_record* rec)
 {
-	return csv_nget_record(self, rec, UINT_MAX);
-}
-
-int csv_nget_record(struct csv_reader* self, struct csv_record* rec, unsigned limit)
-{
-	return csv_nget_record_to(self, rec, limit, UINT_MAX);
+	return csv_get_record_to(self, rec, UINT_MAX);
 }
 
 int csv_get_record_to(struct csv_reader* self, struct csv_record* rec, unsigned field_limit)
 {
-	return csv_nget_record_to(self, rec, UINT_MAX, field_limit);
-}
-
-int csv_nget_record_to(struct csv_reader* self, struct csv_record* rec, unsigned limit, unsigned field_limit)
-{
-	//int ret = sgetline(self->_in->file,
-	//		  &self->_in->linebuf,
-	//		  &self->_in->linebuf_alloc,
-	//		  &self->_in->linebuf_len);
-	int ret = sgetline(self->_in->file,
-			  &rec->rec,
-			  &rec->_in->rec_alloc,
-			  &rec->reclen);
+	int ret = 0;
+	if (self->_in->is_mmap) {
+		ret = sgetline_mmap(self->_in->mmap_ptr,
+				    &rec->rec,
+				    &self->_in->mmap_offset,
+				    &rec->reclen,
+				    self->_in->file_size);
+	} else {
+		ret = sgetline(self->_in->file,
+			       &rec->rec,
+			       &rec->_in->rec_alloc,
+			       &rec->reclen);
+	}
 
 	if (ret == EOF) {
 		self->normal = self->_in->normorg;
@@ -194,7 +195,7 @@ int csv_nget_record_to(struct csv_reader* self, struct csv_record* rec, unsigned
 		return ret;
 	}
 
-	return csv_nparse_to(self, rec, rec->rec, limit, field_limit);
+	return csv_nparse_to(self, rec, rec->rec, rec->reclen, field_limit);
 }
 
 int csv_lowerstandard(struct csv_reader* self)
@@ -267,20 +268,16 @@ int csv_parse_to(struct csv_reader *self, struct csv_record *rec, const char* li
 
 int csv_nparse_to(struct csv_reader *self, struct csv_record *rec, const char* line, unsigned limit, unsigned field_limit)
 {
-	if (string_empty(&self->_in->delim))
-		csv_determine_delimiter(self, line, limit);
-
-	//rec->_in->org_limit = limit;
-	/* Does libcsv own `line'? */
-	if (!rec->_in->rec_alloc) {
-		rec->reclen = strlen(line);
+	/* Does libcsv not own `line'? */
+	if (limit == UINT_MAX) {
+		limit = strlen(line);
+		rec->reclen = limit;
 		/* I'm not making any promises... */
 		rec->rec = (char*)line; /* meh */
 	}
 
-	if (limit == UINT_MAX) {
-		limit = rec->reclen;
-	}
+	if (string_empty(&self->_in->delim))
+		csv_determine_delimiter(self, line, limit);
 
 	rec->size = 0;
 	//rec->rec = NULL;
@@ -340,11 +337,17 @@ int csv_append_line(struct csv_reader* self,
 	int ret = 0;
 
 	const char* old_rec = rec->rec;
-	if (!self->_in->is_mmap) {
+	if (self->_in->is_mmap) {
+		ret = sappline_mmap(self->_in->mmap_ptr,
+			            &rec->rec,	
+				    &self->_in->mmap_offset,
+				    &rec->reclen,
+				    self->_in->file_size);
+	} else {
 		ret = sappline(self->_in->file,
-			      &rec->rec,
-			      &rec->_in->rec_alloc,
-			      &rec->reclen);
+			       &rec->rec,
+			       &rec->_in->rec_alloc,
+			       &rec->reclen);
 	}
 
 	if (old_rec == rec->rec) {
@@ -635,6 +638,61 @@ int csv_reader_open(struct csv_reader* self, const char* file_name)
 {
 	self->_in->file = fopen(file_name, "r");
 	csvfail_if_(!self->_in->file, file_name);
+
+	/* populate size */
+	self->_in->fd = fileno(self->_in->file);
+	struct stat sb;
+	csvfail_if_(fstat(self->_in->fd, &sb) == -1, file_name);
+	self->_in->file_size = sb.st_size;
+
+	return CSV_GOOD;
+}
+
+int csv_reader_open_mmap(struct csv_reader* self, const char* file_name)
+{
+	self->_in->fd = open(file_name, O_RDONLY);
+	csvfail_if_(self->_in->fd == -1, file_name);
+
+	struct stat sb;
+	csvfail_if_(fstat(self->_in->fd, &sb) == -1, file_name);
+	self->_in->file_size = sb.st_size;
+
+	self->_in->mmap_ptr = mmap(NULL,
+			           sb.st_size,
+				   PROT_READ,
+				   MAP_PRIVATE,
+				   self->_in->fd,
+				   0);
+	csvfail_if_(self->_in->mmap_ptr == MAP_FAILED, "mmap");
+	madvise(self->_in->mmap_ptr, sb.st_size, MADV_SEQUENTIAL);
+
+	self->_in->is_mmap = true;
+
+	return CSV_GOOD;
+}
+
+int csv_reader_seek(struct csv_reader* self, size_t offset)
+{
+	csvfail_if_ (offset > self->_in->file_size, 
+		    "offset out of range");
+
+	if (self->_in->is_mmap) {
+		self->_in->mmap_offset = offset;
+		return CSV_GOOD;
+	}
+
+	csvfail_if_ (!self->_in->file, "<null> file");
+        csvfail_if_ (self->_in->file == stdin, "cannot seek stdin");
+	int ret = fseek(self->_in->file, offset, SEEK_SET);
+	csvfail_if_ (ret, "fseek");
+
+	return CSV_GOOD;
+}
+
+int csv_reader_goto(struct csv_reader* self, const char* location)
+{
+	csvfail_if_ (!self->_in->is_mmap, "function `goto' only for mmap");
+	csv_reader_seek(self, location - self->_in->mmap_ptr);
 	return CSV_GOOD;
 }
 
@@ -644,6 +702,7 @@ int csv_reader_close(struct csv_reader* self)
 		int ret = fclose(self->_in->file);
 		csvfail_if_(ret, "fclose");
 	}
+	self->_in->is_mmap = false;
 	return CSV_GOOD;
 }
 
@@ -654,10 +713,6 @@ int csv_reader_reset(struct csv_reader* self)
 	string_clear(&self->_in->weak_delim);
 	self->_in->embedded_breaks = 0;
 	self->_in->rows = 0;
-	//self->_in->linebuf[0] = '\0';
-	if (self->_in->file && self->_in->file != stdin) {
-		int ret = fseek(self->_in->file, 0, SEEK_SET);
-		csvfail_if_(ret, "fseek");
-	}
+	csv_reader_seek(self, 0);
 	return CSV_GOOD;
 }
