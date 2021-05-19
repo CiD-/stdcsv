@@ -53,20 +53,17 @@ void csv_record_free(struct csv_record* self)
 void csv_record_destroy(struct csv_record* self)
 {
 	delete_ (vec, self->_in->_fields);
-	int i = 0;
-	for (; i < self->size; ++i)
-		string_destroy(&self->_in->field_data[i]);
+	string* it = vec_begin(self->_in->field_data);
+	for (; it != vec_end(self->_in->field_data); ++it) {
+		string_destroy(it);
+	}
 	delete_ (vec, self->_in->field_data);
 	free_(self->_in);
 }
 
 struct csv_field* csv_record_release_data(struct csv_record* self)
 {
-	//delete_ (vec, self->_in->_fields);
 	free_(self->_in->_fields);
-	//int i = 0;
-	//for (; i < self->size; ++i)
-	//	string_destroy(&self->_in->field_data[i]);
 	delete_ (vec, self->_in->field_data);
 	free_(self->_in);
 	free_(self);

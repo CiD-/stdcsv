@@ -14,8 +14,7 @@
 struct csv_writer* csv_writer_new()
 {
 	struct csv_writer* self = malloc_(sizeof(*self));
-	return self;
-
+	return csv_writer_construct(self);
 }
 struct csv_writer* csv_writer_construct(struct csv_writer* self)
 {
@@ -40,7 +39,7 @@ struct csv_writer* csv_writer_construct(struct csv_writer* self)
 	};
 
 	string_construct(&self->_in->buffer);
-	string_construct(&self->_in->delim);
+	string_construct_from_char_ptr(&self->_in->delim, ",");
 	string_construct_from_char_ptr(&self->_in->rec_terminator, "\n");
 
 	return self;
@@ -63,12 +62,32 @@ void csv_writer_destroy(struct csv_writer* self)
 	free_(self->_in);
 }
 
+void _write_field_manually(struct csv_writer* self, const struct csv_field* field)
+{
+	unsigned i = 0;
+	fputc('"', self->_in->file);
+	for (; i < field->len; ++i) {
+		fputc(field->data[i], self->_in->file);
+		if (field->data[i] == '"') {
+			fputc('"', self->_in->file);
+		}
+	}
+	fputc('"', self->_in->file);
+}
+
 void csv_write_field(struct csv_writer* self, const struct csv_field* field)
 {
 	_Bool quote_current_field = false;
 	const char* c = field->data;
 
-	if (memchr(field->data, '"', field->len)
+	if (memchr(field->data, '"', field->len)) {
+		quote_current_field = true;
+		if (self->quotes >= QUOTE_RFC4180) {
+			_write_field_manually(self, field);
+			return; 
+		}
+	}
+	if (quote_current_field
 	 || memchr(field->data, '\r', field->len)
 	 || memchr(field->data, '\n', field->len)
 	 || memmem(field->data,
