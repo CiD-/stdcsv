@@ -77,25 +77,27 @@ void _write_field_manually(struct csv_writer* self, const struct csv_field* fiel
 
 void csv_write_field(struct csv_writer* self, const struct csv_field* field)
 {
-	_Bool quote_current_field = false;
-	const char* c = field->data;
+	if (self->quotes != QUOTE_NONE) {	
+		_Bool quote_current_field = false;
+		const char* c = field->data;
 
-	if (memchr(field->data, '"', field->len)) {
-		quote_current_field = true;
-		if (self->quotes >= QUOTE_RFC4180) {
-			_write_field_manually(self, field);
+		if (memchr(field->data, '"', field->len)) {
+			quote_current_field = true;
+			if (self->quotes >= QUOTE_RFC4180) {
+				_write_field_manually(self, field);
+				return;
+			}
+		}
+		if (quote_current_field
+		 || memchr(field->data, '\r', field->len)
+		 || memchr(field->data, '\n', field->len)
+		 || memmem(field->data,
+			   field->len,
+			   self->_in->delim.data,
+			   self->_in->delim.size)) {
+			fprintf(self->_in->file, "\"%.*s\"", field->len, field->data);
 			return;
 		}
-	}
-	if (quote_current_field
-	 || memchr(field->data, '\r', field->len)
-	 || memchr(field->data, '\n', field->len)
-	 || memmem(field->data,
-		   field->len,
-		   self->_in->delim.data,
-		   self->_in->delim.size)) {
-		fprintf(self->_in->file, "\"%.*s\"", field->len, field->data);
-		return;
 	}
 
 	fprintf(self->_in->file, "%.*s", field->len, field->data);
