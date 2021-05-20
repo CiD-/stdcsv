@@ -138,7 +138,7 @@ size_t string_strncpy(string* dest, const char* src, size_t limit)
 	for (; src[i] != '\0' && i < limit; ++i) {
 		((char*)dest->data)[i] = src[i];
 	}
-	string_resize(dest, i-1);
+	string_resize(dest, i);
 	_null_terminate_(dest);
 	return i-1;
 }
