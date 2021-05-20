@@ -96,6 +96,7 @@ struct csv_reader* csv_reader_construct(struct csv_reader* reader)
 		,{ 0 } /* weak_delim */
 		,{ 0 } /* embedded_breaks */
 		,NULL  /* mmap_ptr */
+		,0     /* mmap_offset */
 		,0     /* file_size */
 		,0     /* fd */
 		,0     /* rows */
@@ -692,8 +693,7 @@ int csv_reader_seek(struct csv_reader* self, size_t offset)
 int csv_reader_goto(struct csv_reader* self, const char* location)
 {
 	csvfail_if_ (!self->_in->is_mmap, "function `goto' only for mmap");
-	csv_reader_seek(self, location - self->_in->mmap_ptr);
-	return CSV_GOOD;
+	return csv_reader_seek(self, location - self->_in->mmap_ptr);
 }
 
 int csv_reader_close(struct csv_reader* self)
@@ -713,6 +713,5 @@ int csv_reader_reset(struct csv_reader* self)
 	string_clear(&self->_in->weak_delim);
 	self->_in->embedded_breaks = 0;
 	self->_in->rows = 0;
-	csv_reader_seek(self, 0);
-	return CSV_GOOD;
+	return csv_reader_seek(self, 0);
 }
