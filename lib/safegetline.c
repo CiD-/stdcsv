@@ -104,7 +104,7 @@ int sappline_mmap(const char* mmap,
 		return EOF;
 	}
 	*line = (char*)org_line;
-	*len += *bufidx - org_idx;
+	*len += (*bufidx - org_idx) + 1;
 	return 0;
 }
 

@@ -84,7 +84,7 @@ void csv_write_field(struct csv_writer* self, const struct csv_field* field)
 		quote_current_field = true;
 		if (self->quotes >= QUOTE_RFC4180) {
 			_write_field_manually(self, field);
-			return; 
+			return;
 		}
 	}
 	if (quote_current_field
@@ -128,6 +128,7 @@ int csv_writer_reset(struct csv_writer* self)
 
 int csv_writer_mktmp(struct csv_writer* self)
 {
+
 	char* filename_cp = strdup(string_c_str(self->_in->filename));
 
 	char* targetdir = dirname(filename_cp);
@@ -146,6 +147,21 @@ int csv_writer_mktmp(struct csv_writer* self)
 int csv_writer_isopen(struct csv_writer* self)
 {
 	return (self->_in->file && self->_in->file != stdout);
+}
+
+const char* csv_writer_get_delim(struct csv_writer* self)
+{
+	return string_c_str(&self->_in->delim);
+}
+
+const char* csv_writer_get_terminator(struct csv_writer* self)
+{
+	return string_c_str(&self->_in->rec_terminator);
+}
+
+FILE* csv_writer_get_file(struct csv_writer* self)
+{
+	return self->_in->file;
 }
 
 void csv_writer_set_delim(struct csv_writer* self, const char* delim)

@@ -139,6 +139,22 @@ unsigned csv_reader_embedded_breaks(struct csv_reader* self)
 	return self->_in->embedded_breaks;
 }
 
+const char* csv_reader_get_delim(struct csv_reader* self)
+{
+	return string_c_str(&self->_in->delim);
+}
+
+size_t csv_reader_get_file_size(struct csv_reader* self)
+{
+	if (self->_in->is_mmap || (
+			   self->_in->file
+			&& self->_in->file != stdin)) {
+		return 0;
+	}
+
+	return self->_in->file_size;
+}
+
 /**
  * Mutators
  */
@@ -191,8 +207,8 @@ int csv_get_record_to(struct csv_reader* self, struct csv_record* rec, unsigned 
 
 	if (ret == EOF) {
 		self->normal = self->_in->normorg;
-		if (csv_reader_close(self) == CSV_FAIL)
-			csv_perror();
+		//if (csv_reader_close(self) == CSV_FAIL)
+		//	csv_perror();
 		return ret;
 	}
 
@@ -340,7 +356,7 @@ int csv_append_line(struct csv_reader* self,
 	const char* old_rec = rec->rec;
 	if (self->_in->is_mmap) {
 		ret = sappline_mmap(self->_in->mmap_ptr,
-			            &rec->rec,	
+			            &rec->rec,
 				    &self->_in->mmap_offset,
 				    &rec->reclen,
 				    self->_in->file_size);
@@ -448,7 +464,9 @@ int csv_parse_rfc4180(struct csv_reader* self,
 			break;
 
 		/** In-line break found **/
-		if (qualified && !rec->_in->rec_alloc) {
+		if (qualified 
+		 && !rec->_in->rec_alloc 
+		 && !self->_in->is_mmap) {
 			return CSV_RESET;
 		}
 
@@ -507,7 +525,8 @@ int csv_parse_weak(struct csv_reader* self,
 		}
 
 		/* Cannot reset if we don't own source */
-		if (!rec->_in->rec_alloc) {
+		if (!rec->_in->rec_alloc 
+		 && !self->_in->is_mmap) {
 			return CSV_RESET;
 		}
 
@@ -665,16 +684,22 @@ int csv_reader_open_mmap(struct csv_reader* self, const char* file_name)
 				   self->_in->fd,
 				   0);
 	csvfail_if_(self->_in->mmap_ptr == MAP_FAILED, "mmap");
-	madvise(self->_in->mmap_ptr, sb.st_size, MADV_SEQUENTIAL);
-
 	self->_in->is_mmap = true;
+	csv_reader_madvise(self, MADV_SEQUENTIAL);
 
+	return CSV_GOOD;
+}
+
+int csv_reader_madvise(struct csv_reader* self, int advice)
+{
+	csvfail_if_ (!self->_in->is_mmap, "Cannot advise unless mmap");
+	madvise(self->_in->mmap_ptr, self->_in->file_size, advice);
 	return CSV_GOOD;
 }
 
 int csv_reader_seek(struct csv_reader* self, size_t offset)
 {
-	csvfail_if_ (offset > self->_in->file_size, 
+	csvfail_if_ (offset > self->_in->file_size,
 		    "offset out of range");
 
 	if (self->_in->is_mmap) {
@@ -698,11 +723,15 @@ int csv_reader_goto(struct csv_reader* self, const char* location)
 
 int csv_reader_close(struct csv_reader* self)
 {
-	if (self->_in->file && self->_in->file != stdin) {
-		int ret = fclose(self->_in->file);
-		csvfail_if_(ret, "fclose");
+	if (self->_in->is_mmap) {
+		self->_in->is_mmap = false;
+		csvfail_if_ (munmap(self->_in->mmap_ptr,
+				    self->_in->file_size),
+			     "munmap");
+		csvfail_if_ (close(self->_in->fd), "close");
+	} else if (self->_in->file && self->_in->file != stdin) {
+		csvfail_if_ (fclose(self->_in->file), "fclose");
 	}
-	self->_in->is_mmap = false;
 	return CSV_GOOD;
 }
 

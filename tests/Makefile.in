@@ -87,8 +87,10 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-TESTS = check_libcsv$(EXEEXT)
-check_PROGRAMS = check_libcsv$(EXEEXT)
+TESTS = check_sgetline$(EXEEXT) check_parse$(EXEEXT) \
+	check_read$(EXEEXT) check_mmap$(EXEEXT)
+check_PROGRAMS = check_sgetline$(EXEEXT) check_parse$(EXEEXT) \
+	check_read$(EXEEXT) check_mmap$(EXEEXT)
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
@@ -102,18 +104,40 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-am_check_libcsv_OBJECTS = check_libcsv-check_libcsv.$(OBJEXT)
-check_libcsv_OBJECTS = $(am_check_libcsv_OBJECTS)
+am_check_mmap_OBJECTS = check_mmap-check_mmap.$(OBJEXT)
+check_mmap_OBJECTS = $(am_check_mmap_OBJECTS)
 am__DEPENDENCIES_1 =
-check_libcsv_DEPENDENCIES = $(top_builddir)/lib/libcsv.la \
+check_mmap_DEPENDENCIES = $(top_builddir)/lib/libcsv.la \
 	$(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-check_libcsv_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(check_libcsv_CFLAGS) \
+check_mmap_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(check_mmap_CFLAGS) \
 	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_check_parse_OBJECTS = check_parse-check_parse.$(OBJEXT)
+check_parse_OBJECTS = $(am_check_parse_OBJECTS)
+check_parse_DEPENDENCIES = $(top_builddir)/lib/libcsv.la \
+	$(am__DEPENDENCIES_1)
+check_parse_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(check_parse_CFLAGS) \
+	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_check_read_OBJECTS = check_read-check_read.$(OBJEXT)
+check_read_OBJECTS = $(am_check_read_OBJECTS)
+check_read_DEPENDENCIES = $(top_builddir)/lib/libcsv.la \
+	$(am__DEPENDENCIES_1)
+check_read_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(check_read_CFLAGS) \
+	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_check_sgetline_OBJECTS = check_sgetline-check_sgetline.$(OBJEXT)
+check_sgetline_OBJECTS = $(am_check_sgetline_OBJECTS)
+check_sgetline_DEPENDENCIES = $(top_builddir)/lib/libcsv.la \
+	$(am__DEPENDENCIES_1)
+check_sgetline_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(check_sgetline_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o \
+	$@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -129,7 +153,10 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/check_libcsv-check_libcsv.Po
+am__depfiles_remade = ./$(DEPDIR)/check_mmap-check_mmap.Po \
+	./$(DEPDIR)/check_parse-check_parse.Po \
+	./$(DEPDIR)/check_read-check_read.Po \
+	./$(DEPDIR)/check_sgetline-check_sgetline.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -149,8 +176,10 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(check_libcsv_SOURCES)
-DIST_SOURCES = $(check_libcsv_SOURCES)
+SOURCES = $(check_mmap_SOURCES) $(check_parse_SOURCES) \
+	$(check_read_SOURCES) $(check_sgetline_SOURCES)
+DIST_SOURCES = $(check_mmap_SOURCES) $(check_parse_SOURCES) \
+	$(check_read_SOURCES) $(check_sgetline_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -505,9 +534,18 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-check_libcsv_SOURCES = check_libcsv.c $(top_builddir)/lib/util/util.h $(top_builddir)/lib/safegetline.h $(top_builddir)/lib/include/csv.h
-check_libcsv_CFLAGS = $(CHECK_CFLAGS)
-check_libcsv_LDADD = $(top_builddir)/lib/libcsv.la $(CHECK_LIBS)
+check_sgetline_SOURCES = check_sgetline.c $(top_builddir)/lib/util/util.h $(top_builddir)/lib/safegetline.h $(top_builddir)/lib/include/csv.h
+check_sgetline_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/lib/ -I$(top_builddir)/lib/include
+check_sgetline_LDADD = $(top_builddir)/lib/libcsv.la $(CHECK_LIBS)
+check_parse_SOURCES = check_parse.c $(top_builddir)/lib/util/util.h $(top_builddir)/lib/include/csv.h
+check_parse_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/lib/ -I$(top_builddir)/lib/include
+check_parse_LDADD = $(top_builddir)/lib/libcsv.la $(CHECK_LIBS)
+check_read_SOURCES = check_read.c $(top_builddir)/lib/util/util.h $(top_builddir)/lib/include/csv.h
+check_read_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/lib/ -I$(top_builddir)/lib/include
+check_read_LDADD = $(top_builddir)/lib/libcsv.la $(CHECK_LIBS)
+check_mmap_SOURCES = check_mmap.c $(top_builddir)/lib/util/util.h $(top_builddir)/lib/include/csv.h
+check_mmap_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/lib/ -I$(top_builddir)/lib/include
+check_mmap_LDADD = $(top_builddir)/lib/libcsv.la $(CHECK_LIBS)
 all: all-am
 
 .SUFFIXES:
@@ -551,9 +589,21 @@ clean-checkPROGRAMS:
 	echo " rm -f" $$list; \
 	rm -f $$list
 
-check_libcsv$(EXEEXT): $(check_libcsv_OBJECTS) $(check_libcsv_DEPENDENCIES) $(EXTRA_check_libcsv_DEPENDENCIES) 
-	@rm -f check_libcsv$(EXEEXT)
-	$(AM_V_CCLD)$(check_libcsv_LINK) $(check_libcsv_OBJECTS) $(check_libcsv_LDADD) $(LIBS)
+check_mmap$(EXEEXT): $(check_mmap_OBJECTS) $(check_mmap_DEPENDENCIES) $(EXTRA_check_mmap_DEPENDENCIES) 
+	@rm -f check_mmap$(EXEEXT)
+	$(AM_V_CCLD)$(check_mmap_LINK) $(check_mmap_OBJECTS) $(check_mmap_LDADD) $(LIBS)
+
+check_parse$(EXEEXT): $(check_parse_OBJECTS) $(check_parse_DEPENDENCIES) $(EXTRA_check_parse_DEPENDENCIES) 
+	@rm -f check_parse$(EXEEXT)
+	$(AM_V_CCLD)$(check_parse_LINK) $(check_parse_OBJECTS) $(check_parse_LDADD) $(LIBS)
+
+check_read$(EXEEXT): $(check_read_OBJECTS) $(check_read_DEPENDENCIES) $(EXTRA_check_read_DEPENDENCIES) 
+	@rm -f check_read$(EXEEXT)
+	$(AM_V_CCLD)$(check_read_LINK) $(check_read_OBJECTS) $(check_read_LDADD) $(LIBS)
+
+check_sgetline$(EXEEXT): $(check_sgetline_OBJECTS) $(check_sgetline_DEPENDENCIES) $(EXTRA_check_sgetline_DEPENDENCIES) 
+	@rm -f check_sgetline$(EXEEXT)
+	$(AM_V_CCLD)$(check_sgetline_LINK) $(check_sgetline_OBJECTS) $(check_sgetline_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -561,7 +611,10 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_libcsv-check_libcsv.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_mmap-check_mmap.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_parse-check_parse.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_read-check_read.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_sgetline-check_sgetline.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -590,19 +643,61 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
 
-check_libcsv-check_libcsv.o: check_libcsv.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libcsv_CFLAGS) $(CFLAGS) -MT check_libcsv-check_libcsv.o -MD -MP -MF $(DEPDIR)/check_libcsv-check_libcsv.Tpo -c -o check_libcsv-check_libcsv.o `test -f 'check_libcsv.c' || echo '$(srcdir)/'`check_libcsv.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/check_libcsv-check_libcsv.Tpo $(DEPDIR)/check_libcsv-check_libcsv.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='check_libcsv.c' object='check_libcsv-check_libcsv.o' libtool=no @AMDEPBACKSLASH@
+check_mmap-check_mmap.o: check_mmap.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_mmap_CFLAGS) $(CFLAGS) -MT check_mmap-check_mmap.o -MD -MP -MF $(DEPDIR)/check_mmap-check_mmap.Tpo -c -o check_mmap-check_mmap.o `test -f 'check_mmap.c' || echo '$(srcdir)/'`check_mmap.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/check_mmap-check_mmap.Tpo $(DEPDIR)/check_mmap-check_mmap.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='check_mmap.c' object='check_mmap-check_mmap.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libcsv_CFLAGS) $(CFLAGS) -c -o check_libcsv-check_libcsv.o `test -f 'check_libcsv.c' || echo '$(srcdir)/'`check_libcsv.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_mmap_CFLAGS) $(CFLAGS) -c -o check_mmap-check_mmap.o `test -f 'check_mmap.c' || echo '$(srcdir)/'`check_mmap.c
 
-check_libcsv-check_libcsv.obj: check_libcsv.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libcsv_CFLAGS) $(CFLAGS) -MT check_libcsv-check_libcsv.obj -MD -MP -MF $(DEPDIR)/check_libcsv-check_libcsv.Tpo -c -o check_libcsv-check_libcsv.obj `if test -f 'check_libcsv.c'; then $(CYGPATH_W) 'check_libcsv.c'; else $(CYGPATH_W) '$(srcdir)/check_libcsv.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/check_libcsv-check_libcsv.Tpo $(DEPDIR)/check_libcsv-check_libcsv.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='check_libcsv.c' object='check_libcsv-check_libcsv.obj' libtool=no @AMDEPBACKSLASH@
+check_mmap-check_mmap.obj: check_mmap.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_mmap_CFLAGS) $(CFLAGS) -MT check_mmap-check_mmap.obj -MD -MP -MF $(DEPDIR)/check_mmap-check_mmap.Tpo -c -o check_mmap-check_mmap.obj `if test -f 'check_mmap.c'; then $(CYGPATH_W) 'check_mmap.c'; else $(CYGPATH_W) '$(srcdir)/check_mmap.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/check_mmap-check_mmap.Tpo $(DEPDIR)/check_mmap-check_mmap.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='check_mmap.c' object='check_mmap-check_mmap.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libcsv_CFLAGS) $(CFLAGS) -c -o check_libcsv-check_libcsv.obj `if test -f 'check_libcsv.c'; then $(CYGPATH_W) 'check_libcsv.c'; else $(CYGPATH_W) '$(srcdir)/check_libcsv.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_mmap_CFLAGS) $(CFLAGS) -c -o check_mmap-check_mmap.obj `if test -f 'check_mmap.c'; then $(CYGPATH_W) 'check_mmap.c'; else $(CYGPATH_W) '$(srcdir)/check_mmap.c'; fi`
+
+check_parse-check_parse.o: check_parse.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_parse_CFLAGS) $(CFLAGS) -MT check_parse-check_parse.o -MD -MP -MF $(DEPDIR)/check_parse-check_parse.Tpo -c -o check_parse-check_parse.o `test -f 'check_parse.c' || echo '$(srcdir)/'`check_parse.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/check_parse-check_parse.Tpo $(DEPDIR)/check_parse-check_parse.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='check_parse.c' object='check_parse-check_parse.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_parse_CFLAGS) $(CFLAGS) -c -o check_parse-check_parse.o `test -f 'check_parse.c' || echo '$(srcdir)/'`check_parse.c
+
+check_parse-check_parse.obj: check_parse.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_parse_CFLAGS) $(CFLAGS) -MT check_parse-check_parse.obj -MD -MP -MF $(DEPDIR)/check_parse-check_parse.Tpo -c -o check_parse-check_parse.obj `if test -f 'check_parse.c'; then $(CYGPATH_W) 'check_parse.c'; else $(CYGPATH_W) '$(srcdir)/check_parse.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/check_parse-check_parse.Tpo $(DEPDIR)/check_parse-check_parse.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='check_parse.c' object='check_parse-check_parse.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_parse_CFLAGS) $(CFLAGS) -c -o check_parse-check_parse.obj `if test -f 'check_parse.c'; then $(CYGPATH_W) 'check_parse.c'; else $(CYGPATH_W) '$(srcdir)/check_parse.c'; fi`
+
+check_read-check_read.o: check_read.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_read_CFLAGS) $(CFLAGS) -MT check_read-check_read.o -MD -MP -MF $(DEPDIR)/check_read-check_read.Tpo -c -o check_read-check_read.o `test -f 'check_read.c' || echo '$(srcdir)/'`check_read.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/check_read-check_read.Tpo $(DEPDIR)/check_read-check_read.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='check_read.c' object='check_read-check_read.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_read_CFLAGS) $(CFLAGS) -c -o check_read-check_read.o `test -f 'check_read.c' || echo '$(srcdir)/'`check_read.c
+
+check_read-check_read.obj: check_read.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_read_CFLAGS) $(CFLAGS) -MT check_read-check_read.obj -MD -MP -MF $(DEPDIR)/check_read-check_read.Tpo -c -o check_read-check_read.obj `if test -f 'check_read.c'; then $(CYGPATH_W) 'check_read.c'; else $(CYGPATH_W) '$(srcdir)/check_read.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/check_read-check_read.Tpo $(DEPDIR)/check_read-check_read.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='check_read.c' object='check_read-check_read.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_read_CFLAGS) $(CFLAGS) -c -o check_read-check_read.obj `if test -f 'check_read.c'; then $(CYGPATH_W) 'check_read.c'; else $(CYGPATH_W) '$(srcdir)/check_read.c'; fi`
+
+check_sgetline-check_sgetline.o: check_sgetline.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_sgetline_CFLAGS) $(CFLAGS) -MT check_sgetline-check_sgetline.o -MD -MP -MF $(DEPDIR)/check_sgetline-check_sgetline.Tpo -c -o check_sgetline-check_sgetline.o `test -f 'check_sgetline.c' || echo '$(srcdir)/'`check_sgetline.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/check_sgetline-check_sgetline.Tpo $(DEPDIR)/check_sgetline-check_sgetline.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='check_sgetline.c' object='check_sgetline-check_sgetline.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_sgetline_CFLAGS) $(CFLAGS) -c -o check_sgetline-check_sgetline.o `test -f 'check_sgetline.c' || echo '$(srcdir)/'`check_sgetline.c
+
+check_sgetline-check_sgetline.obj: check_sgetline.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_sgetline_CFLAGS) $(CFLAGS) -MT check_sgetline-check_sgetline.obj -MD -MP -MF $(DEPDIR)/check_sgetline-check_sgetline.Tpo -c -o check_sgetline-check_sgetline.obj `if test -f 'check_sgetline.c'; then $(CYGPATH_W) 'check_sgetline.c'; else $(CYGPATH_W) '$(srcdir)/check_sgetline.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/check_sgetline-check_sgetline.Tpo $(DEPDIR)/check_sgetline-check_sgetline.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='check_sgetline.c' object='check_sgetline-check_sgetline.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_sgetline_CFLAGS) $(CFLAGS) -c -o check_sgetline-check_sgetline.obj `if test -f 'check_sgetline.c'; then $(CYGPATH_W) 'check_sgetline.c'; else $(CYGPATH_W) '$(srcdir)/check_sgetline.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -803,9 +898,30 @@ recheck: all $(check_PROGRAMS)
 	        am__force_recheck=am--force-recheck \
 	        TEST_LOGS="$$log_list"; \
 	exit $$?
-check_libcsv.log: check_libcsv$(EXEEXT)
-	@p='check_libcsv$(EXEEXT)'; \
-	b='check_libcsv'; \
+check_sgetline.log: check_sgetline$(EXEEXT)
+	@p='check_sgetline$(EXEEXT)'; \
+	b='check_sgetline'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_parse.log: check_parse$(EXEEXT)
+	@p='check_parse$(EXEEXT)'; \
+	b='check_parse'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_read.log: check_read$(EXEEXT)
+	@p='check_read$(EXEEXT)'; \
+	b='check_read'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_mmap.log: check_mmap$(EXEEXT)
+	@p='check_mmap$(EXEEXT)'; \
+	b='check_mmap'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -903,7 +1019,10 @@ clean-am: clean-checkPROGRAMS clean-generic clean-libtool \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/check_libcsv-check_libcsv.Po
+		-rm -f ./$(DEPDIR)/check_mmap-check_mmap.Po
+	-rm -f ./$(DEPDIR)/check_parse-check_parse.Po
+	-rm -f ./$(DEPDIR)/check_read-check_read.Po
+	-rm -f ./$(DEPDIR)/check_sgetline-check_sgetline.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -949,7 +1068,10 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/check_libcsv-check_libcsv.Po
+		-rm -f ./$(DEPDIR)/check_mmap-check_mmap.Po
+	-rm -f ./$(DEPDIR)/check_parse-check_parse.Po
+	-rm -f ./$(DEPDIR)/check_read-check_read.Po
+	-rm -f ./$(DEPDIR)/check_sgetline-check_sgetline.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

@@ -278,6 +278,7 @@ int main (int argc, char **argv)
 			break;
 		case CSV_FAIL:
 			optind = argc; /* no break intentional */
+		case EOF:
 		default:
 			if (csv_writer_close(writer) == CSV_FAIL)
 				csv_perror_exit();

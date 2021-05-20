@@ -123,6 +123,8 @@ void csv_reader_destroy(struct csv_reader* self);
 /** Accessors **/
 unsigned csv_reader_row_count(struct csv_reader*);
 unsigned csv_reader_embedded_breaks(struct csv_reader*);
+const char* csv_reader_get_delim(struct csv_reader*);
+size_t csv_reader_get_file_size(struct csv_reader*);
 
 /** Mutators **/
 void csv_reader_set_delim(struct csv_reader*, const char*);
@@ -141,14 +143,30 @@ int csv_get_record_to(struct csv_reader*, struct csv_record*, unsigned field_lim
 int csv_reader_reset(struct csv_reader*);
 
 /**
- * Open a csv file for reading.  This file will close itself
- * when reading reaches the end of the file.
+ * Open a csv file for reading.
  */
 int csv_reader_open(struct csv_reader*, const char* file_name);
+
+/**
+ * Open a csv file for reading and mmap it.
+ * By default, the map is advised `MADV_SEQUENTAIL'
+ */
 int csv_reader_open_mmap(struct csv_reader*, const char* file_name);
 
+/**
+ *  For mmap only: pass through to madvise on whole file
+ *  returns CSV_FAIL if out of range
+ */
+int csv_reader_madvise(struct csv_reader*, const int advice);
+
+/**
+ * Seek to a certain offset in the file
+ * returns CSV_FAIL if out of range or seek fails
+ */
 int csv_reader_seek(struct csv_reader*, size_t offset);
-/* mmap only */
+/**
+ * For mmap only: goto a specific location via address
+ */
 int csv_reader_goto(struct csv_reader*, const char*);
 /**
  * This function is available but is called internally
@@ -160,7 +178,7 @@ int csv_reader_close(struct csv_reader*);
  * Parse an individual const char*. This function is used
  * internally by csv_get_record, and is only meant to handle
  * a single record. This will not treat new lines as a
- * record separator.
+ * record separator, nor increment embedded break count.
  */
 int csv_parse(struct csv_reader*, struct csv_record*, const char*);
 int csv_nparse(struct csv_reader*, struct csv_record*, const char*, unsigned char_limit);
@@ -190,6 +208,21 @@ void csv_writer_destroy(struct csv_writer*);
  * return true if writer has open file
  */
 int csv_writer_isopen(struct csv_writer*);
+
+/**
+ * access delimiter as const char*
+ */
+const char* csv_writer_get_delim(struct csv_writer*);
+
+/**
+ * access line ending as const char*
+ */
+const char* csv_writer_get_terminator(struct csv_writer*);
+
+/**
+ * access FILE* for writer
+ */
+FILE* csv_writer_get_file(struct csv_writer*);
 
 /**
  * Set output delimiter
