@@ -44,7 +44,7 @@ queue* tmp_push(void* tmp_file)
 void tmp_remove_node(queue* node)
 {
 	string* tmp = queue_remove(&_tmp_file_head, node);
-	delete_ (string, tmp);
+	string_clear(tmp);
 }
 
 void tmp_remove_file(const char* tmp_file)

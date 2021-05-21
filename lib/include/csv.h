@@ -237,7 +237,23 @@ void csv_writer_set_line_ending(struct csv_writer*, const char*);
 /**
  * Open a file for writing csv conents
  */
-int csv_writer_open(struct csv_writer*, const char* fileName);
+int csv_writer_open(struct csv_writer*, const char*);
+
+/**
+ * All writing is done to temp files that are
+ * then renamed. The renaming occurs when you
+ * call csv_writer_close Therefore, the 
+ * following is legal:
+ *
+ * csv_writer_open(writer, "foo.txt");
+ * csv_write_record(writer, record);
+ * csv_writer_set_filename(writer, "bar.txt");
+ * csv_writer_close(writer);
+ *
+ * The data from record will be stored in
+ * bar.txt and foo.txt does not exist.
+ */
+void csv_writer_set_filename(struct csv_writer*, const char*);
 
 /**
  * Open a temp FILE* that will be used for

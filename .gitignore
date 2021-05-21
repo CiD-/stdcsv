@@ -12,7 +12,7 @@ man/
 html/
 
 # Check files
-check_libcsv
+check_*
 *.trs
 *.log
 

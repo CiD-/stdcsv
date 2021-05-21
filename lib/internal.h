@@ -44,9 +44,8 @@ struct csv_read_internal {
 struct csv_write_internal {
 	FILE* file;
 	queue* tmp_node;
-	string* tempname;
-	string* filename;
-	string* filename_org;
+	string tempname;
+	string filename;
 	string buffer;
 	string delim;
 	string rec_terminator;

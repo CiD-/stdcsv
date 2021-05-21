@@ -29,15 +29,16 @@ struct csv_writer* csv_writer_construct(struct csv_writer* self)
 	*self->_in = (struct csv_write_internal) {
 		 stdout /* file */
 		,NULL   /* tmp_node */
-		,NULL   /* tempname */
-		,NULL   /* filename */
-		,NULL   /* filename_org */
+		,{ 0 }  /* tempname */
+		,{ 0 }  /* filename */
 		,{ 0 }  /* buffer */
 		,{ 0 }  /* delim */
 		,{ 0 }  /* rec_terminator */
 		,0      /* record_len */
 	};
 
+	string_construct(&self->_in->tempname);
+	string_construct(&self->_in->filename);
 	string_construct(&self->_in->buffer);
 	string_construct_from_char_ptr(&self->_in->delim, ",");
 	string_construct_from_char_ptr(&self->_in->rec_terminator, "\n");
@@ -53,9 +54,16 @@ void csv_writer_free(struct csv_writer* self)
 
 void csv_writer_destroy(struct csv_writer* self)
 {
-	tmp_remove_node(self->_in->tmp_node);
-	delete_ (string, self->_in->filename);
-	delete_ (string, self->_in->filename_org);
+	/* Writer was not closed, temp file
+	 * still exists. Remove temp file...
+	 */
+	if (self->_in->tmp_node) {
+		string* tmp = self->_in->tmp_node->data;
+		tmp_remove_file(string_c_str(tmp));
+		tmp_remove_node(self->_in->tmp_node);
+	}
+	string_destroy(&self->_in->tempname);
+	string_destroy(&self->_in->filename);
 	string_destroy(&self->_in->buffer);
 	string_destroy(&self->_in->delim);
 	string_destroy(&self->_in->rec_terminator);
@@ -77,7 +85,7 @@ void _write_field_manually(struct csv_writer* self, const struct csv_field* fiel
 
 void csv_write_field(struct csv_writer* self, const struct csv_field* field)
 {
-	if (self->quotes != QUOTE_NONE) {	
+	if (self->quotes != QUOTE_NONE) {
 		_Bool quote_current_field = false;
 		const char* c = field->data;
 
@@ -120,29 +128,27 @@ int csv_writer_reset(struct csv_writer* self)
 	csvfail_if_(self->_in->file == stdout, "Cannot reset stdout");
 	csvfail_if_(!self->_in->file, "No file to reset");
 	csvfail_if_(fclose(self->_in->file) == EOF,
-		    string_c_str(self->_in->tempname));
-	//self->_in->file = NULL;
-	self->_in->file = fopen(string_c_str(self->_in->tempname), "w");
-	csvfail_if_(!self->_in->file, string_c_str(self->_in->tempname));
+		    string_c_str(&self->_in->tempname));
+	self->_in->file = fopen(string_c_str(&self->_in->tempname), "w");
+	csvfail_if_(!self->_in->file, string_c_str(&self->_in->tempname));
 
 	return 0;
 }
 
 int csv_writer_mktmp(struct csv_writer* self)
 {
-
-	char* filename_cp = strdup(string_c_str(self->_in->filename));
+	char* filename_cp = strdup(string_c_str(&self->_in->filename));
 
 	char* targetdir = dirname(filename_cp);
-	self->_in->tempname = string_from_char_ptr(targetdir);
-	string_strcat(self->_in->tempname, "/csv_XXXXXX");
+	string_strcpy(&self->_in->tempname, targetdir);
+	free_(filename_cp);
+	string_strcat(&self->_in->tempname, "/csv_XXXXXX");
 
-	int fd = mkstemp(self->_in->tempname->data);
+	int fd = mkstemp(self->_in->tempname.data);
 	self->_in->file = fdopen(fd, "w");
-	csvfail_if_(!self->_in->file, string_c_str(self->_in->tempname));
+	csvfail_if_(!self->_in->file, string_c_str(&self->_in->tempname));
 
-	self->_in->tmp_node = tmp_push(self->_in->tempname);
-
+	self->_in->tmp_node = tmp_push(&self->_in->tempname);
 	return 0;
 }
 
@@ -178,11 +184,17 @@ void csv_writer_set_line_ending(struct csv_writer* self, const char* ending)
 
 int csv_writer_open(struct csv_writer* self, const char* filename)
 {
+	csvfail_if_ (csv_writer_isopen(self),
+		     "write file already open");
 	int ret = 0;
-	if (!csv_writer_isopen(self))
-		ret = csv_writer_mktmp(self);
-	self->_in->filename = string_from_char_ptr(filename);
+	csv_writer_set_filename(self, filename);
+	ret = csv_writer_mktmp(self);
 	return ret;
+}
+
+void csv_writer_set_filename(struct csv_writer* self, const char* filename)
+{
+	string_strcpy(&self->_in->filename, filename);
 }
 
 int csv_writer_close(struct csv_writer* self)
@@ -191,17 +203,20 @@ int csv_writer_close(struct csv_writer* self)
 		return 0;
 
 	csvfail_if_(fclose(self->_in->file) == EOF,
-			   string_c_str(self->_in->tempname));
+			   string_c_str(&self->_in->tempname));
 	self->_in->file = NULL;
 
-	const char* file = string_c_str(self->_in->filename);
-	const char* tmp = string_c_str(self->_in->tempname);
+	const char* file = string_c_str(&self->_in->filename);
+	const char* tmp = string_c_str(&self->_in->tempname);
 
-	if (!string_empty(self->_in->filename)) {
+	if (!string_empty(&self->_in->filename)) {
 		csvfail_if_(rename(tmp, file), tmp);
 		csvfail_if_(chmod(file, 0666), file);
-		tmp_remove_node(self->_in->tmp_node);
 	} else {
+		/* TODO: We are assuming all the written
+		 *       data has made to disk. We 
+		 *       should be using fsync to check.
+		 */
 		FILE* dump_file = fopen(tmp, "r");
 		csvfail_if_(!dump_file, tmp);
 
@@ -211,8 +226,9 @@ int csv_writer_close(struct csv_writer* self)
 
 		csvfail_if_(fclose(dump_file) == EOF, tmp);
 		tmp_remove_file(self->_in->tmp_node->data);
-		tmp_remove_node(self->_in->tmp_node);
 	}
+	tmp_remove_node(self->_in->tmp_node);
+	self->_in->tmp_node = NULL;
 	return 0;
 }
 
