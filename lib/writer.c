@@ -70,20 +70,24 @@ void csv_writer_destroy(struct csv_writer* self)
 	free_(self->_in);
 }
 
-void _write_field_manually(struct csv_writer* self, const struct csv_field* field)
+int _write_field_manually(struct csv_writer* self, const struct csv_field* field)
 {
 	unsigned i = 0;
+	unsigned quote_count = 2;
 	fputc('"', self->_in->file);
 	for (; i < field->len; ++i) {
 		fputc(field->data[i], self->_in->file);
 		if (field->data[i] == '"') {
 			fputc('"', self->_in->file);
+			++quote_count;
 		}
 	}
 	fputc('"', self->_in->file);
+
+	return quote_count + field->len;
 }
 
-void csv_write_field(struct csv_writer* self, const struct csv_field* field)
+int csv_write_field(struct csv_writer* self, const struct csv_field* field)
 {
 	if (self->quotes != QUOTE_NONE) {
 		_Bool quote_current_field = false;
@@ -92,8 +96,7 @@ void csv_write_field(struct csv_writer* self, const struct csv_field* field)
 		if (memchr(field->data, '"', field->len)) {
 			quote_current_field = true;
 			if (self->quotes >= QUOTE_RFC4180) {
-				_write_field_manually(self, field);
-				return;
+				return _write_field_manually(self, field);
 			}
 		}
 		if (quote_current_field
@@ -104,23 +107,28 @@ void csv_write_field(struct csv_writer* self, const struct csv_field* field)
 			   self->_in->delim.data,
 			   self->_in->delim.size)) {
 			fprintf(self->_in->file, "\"%.*s\"", field->len, field->data);
-			return;
+			return field->len + 2;
 		}
 	}
 
 	fprintf(self->_in->file, "%.*s", field->len, field->data);
+	return field->len;
 }
 
-void csv_write_record(struct csv_writer* self, struct csv_record* rec)
+int csv_write_record(struct csv_writer* self, struct csv_record* rec)
 {
 	int i = 0;
+	unsigned len = 0;
 	for (; i < rec->size; ++i) {
-		if (i)
+		if (i) {
 			fputs(string_c_str(&self->_in->delim), self->_in->file);
-		csv_write_field(self, &rec->fields[i]);
+			len += self->_in->delim.size;
+		}
+		len += csv_write_field(self, &rec->fields[i]);
 	}
 
 	fputs(string_c_str(&self->_in->rec_terminator), self->_in->file);
+	return len + self->_in->rec_terminator.size;
 }
 
 int csv_writer_reset(struct csv_writer* self)

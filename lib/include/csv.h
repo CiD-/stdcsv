@@ -280,13 +280,13 @@ int csv_writer_close(struct csv_writer*);
  * Write a single record into the FILE* stored
  * in the writer struct
  */
-void csv_write_record(struct csv_writer*, struct csv_record*);
+int csv_write_record(struct csv_writer*, struct csv_record*);
 
 /**
  * Write a single field from a record.  This function
  * will not print write delimiters or line endings.
  */
-void csv_write_field(struct csv_writer*, const struct csv_field* field);
+int csv_write_field(struct csv_writer*, const struct csv_field* field);
 
 #ifdef __cplusplus
 }
