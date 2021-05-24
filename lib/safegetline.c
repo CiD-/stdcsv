@@ -128,13 +128,17 @@ int sgetline_mmap(const char* mmap,
 	}
 
 	*line = (char*) &mmap[*bufidx];
-	char* eol = memchr(&mmap[*bufidx], '\n', limit - *bufidx);
+	char* eol = memchr(*line, '\n', limit - *bufidx);
 
 	/* last read */
 	if (eol == NULL) {
 		*len = limit - *bufidx;
 		*bufidx = limit;
 		return (*len) ? 0 : EOF;
+	}
+
+	if (*(eol-1) == '\r') {
+		--eol;
 	}
 
 	*len = eol - *line;
