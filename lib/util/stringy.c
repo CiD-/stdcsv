@@ -162,6 +162,13 @@ const char* string_c_str(string* s)
 	return (const char*) s->data;
 }
 
+char* string_export(string* s)
+{
+	char* data = s->data;
+	string_construct(s);
+	return data;
+}
+
 void string_clear(string* s)
 {
 	vec_clear(s);

@@ -225,6 +225,19 @@ const char* csv_writer_get_terminator(struct csv_writer*);
 FILE* csv_writer_get_file(struct csv_writer*);
 
 /**
+ * retrieve file name to be written to
+ */
+const char* csv_writer_get_filename(struct csv_writer*);
+
+
+/**
+ * Retrieve file name, and remove it from
+ * the writer. Caller now owns the allocated
+ * memory for the file name.
+ */
+char* csv_writer_detach_filename(struct csv_writer*);
+
+/**
  * Set output delimiter
  */
 void csv_writer_set_delim(struct csv_writer*, const char*);
@@ -242,7 +255,7 @@ int csv_writer_open(struct csv_writer*, const char*);
 /**
  * All writing is done to temp files that are
  * then renamed. The renaming occurs when you
- * call csv_writer_close Therefore, the 
+ * call csv_writer_close Therefore, the
  * following is legal:
  *
  * csv_writer_open(writer, "foo.txt");

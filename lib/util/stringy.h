@@ -49,6 +49,7 @@ size_t string_sprintf(string* s, const char* fmt, ...);
 const char* string_c_str(string* s);
 
 /* string iterface */
+char* string_export(string*);
 void string_clear(string*);
 void string_resize(string*, size_t);
 void string_copy(string* dest, string* src);

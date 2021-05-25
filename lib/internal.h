@@ -50,6 +50,7 @@ struct csv_write_internal {
 	string delim;
 	string rec_terminator;
 	int reclen;
+	_Bool is_detached;
 };
 
 

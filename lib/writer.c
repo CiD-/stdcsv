@@ -35,6 +35,7 @@ struct csv_writer* csv_writer_construct(struct csv_writer* self)
 		,{ 0 }  /* delim */
 		,{ 0 }  /* rec_terminator */
 		,0      /* record_len */
+		,false  /* is_detached */
 	};
 
 	string_construct(&self->_in->tempname);
@@ -54,8 +55,9 @@ void csv_writer_free(struct csv_writer* self)
 
 void csv_writer_destroy(struct csv_writer* self)
 {
-	/* Writer was not closed, temp file
-	 * still exists. Remove temp file...
+	/* Writer was not closed or temp file
+	 * is_detached. Either way, the temp file
+	 * still exists.
 	 */
 	if (self->_in->tmp_node) {
 		string* tmp = self->_in->tmp_node->data;
@@ -140,24 +142,30 @@ int csv_writer_reset(struct csv_writer* self)
 	self->_in->file = fopen(string_c_str(&self->_in->tempname), "w");
 	csvfail_if_(!self->_in->file, string_c_str(&self->_in->tempname));
 
-	return 0;
+	return CSV_GOOD;
 }
 
 int csv_writer_mktmp(struct csv_writer* self)
 {
-	char* filename_cp = strdup(string_c_str(&self->_in->filename));
-
-	char* targetdir = dirname(filename_cp);
+	char* targetdir = ".";
+	char* filename_cp = NULL;
+	if (!string_empty(&self->_in->filename)) {
+		filename_cp = strdup(string_c_str(&self->_in->filename));
+		char* targetdir = dirname(filename_cp);
+	}
 	string_strcpy(&self->_in->tempname, targetdir);
-	free_(filename_cp);
 	string_strcat(&self->_in->tempname, "/csv_XXXXXX");
+
+	if (filename_cp != NULL) {
+		free_(filename_cp);
+	}
 
 	int fd = mkstemp(self->_in->tempname.data);
 	self->_in->file = fdopen(fd, "w");
 	csvfail_if_(!self->_in->file, string_c_str(&self->_in->tempname));
 
 	self->_in->tmp_node = tmp_push(&self->_in->tempname);
-	return 0;
+	return CSV_GOOD;
 }
 
 int csv_writer_isopen(struct csv_writer* self)
@@ -180,6 +188,30 @@ FILE* csv_writer_get_file(struct csv_writer* self)
 	return self->_in->file;
 }
 
+const char* csv_writer_get_filename(struct csv_writer* self)
+{
+	string* filename = NULL;
+	if (self->_in->is_detached) {
+		filename = &self->_in->tempname;
+	} else {
+		filename = &self->_in->filename;
+	}
+
+	if (string_empty(filename)) {
+		return NULL;
+	}
+	return string_c_str(filename);
+}
+
+char* csv_writer_detach_filename(struct csv_writer* self)
+{
+	self->_in->is_detached = true;
+	if (string_empty(&self->_in->filename)) {
+		return NULL;
+	}
+	return string_export(&self->_in->filename);
+}
+
 void csv_writer_set_delim(struct csv_writer* self, const char* delim)
 {
 	string_strcpy(&self->_in->delim, delim);
@@ -194,25 +226,30 @@ int csv_writer_open(struct csv_writer* self, const char* filename)
 {
 	csvfail_if_ (csv_writer_isopen(self),
 		     "write file already open");
-	int ret = 0;
 	csv_writer_set_filename(self, filename);
-	ret = csv_writer_mktmp(self);
-	return ret;
+	return csv_writer_mktmp(self);
 }
 
 void csv_writer_set_filename(struct csv_writer* self, const char* filename)
 {
 	string_strcpy(&self->_in->filename, filename);
+	self->_in->is_detached = false;
 }
 
 int csv_writer_close(struct csv_writer* self)
 {
 	if (self->_in->file == stdout)
-		return 0;
+		return CSV_GOOD;
 
 	csvfail_if_(fclose(self->_in->file) == EOF,
 			   string_c_str(&self->_in->tempname));
 	self->_in->file = NULL;
+
+	if (self->_in->is_detached) {
+		/* If detached leave tmp_node in queue */
+		self->_in->is_detached = false;
+		return CSV_GOOD;
+	}
 
 	const char* file = string_c_str(&self->_in->filename);
 	const char* tmp = string_c_str(&self->_in->tempname);
@@ -222,7 +259,7 @@ int csv_writer_close(struct csv_writer* self)
 		csvfail_if_(chmod(file, 0666), file);
 	} else {
 		/* TODO: We are assuming all the written
-		 *       data has made to disk. We 
+		 *       data has made it to disk. We really
 		 *       should be using fsync to check.
 		 */
 		FILE* dump_file = fopen(tmp, "r");
@@ -237,6 +274,6 @@ int csv_writer_close(struct csv_writer* self)
 	}
 	tmp_remove_node(self->_in->tmp_node);
 	self->_in->tmp_node = NULL;
-	return 0;
+	return CSV_GOOD;
 }
 
