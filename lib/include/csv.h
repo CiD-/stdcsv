@@ -213,11 +213,13 @@ int csv_writer_isopen(struct csv_writer*);
  * access delimiter as const char*
  */
 const char* csv_writer_get_delim(struct csv_writer*);
+struct csv_field csv_writer_get_delim_field(struct csv_writer*);
 
 /**
  * access line ending as const char*
  */
 const char* csv_writer_get_terminator(struct csv_writer*);
+struct csv_field csv_writer_get_terminator_field(struct csv_writer*);
 
 /**
  * access FILE* for writer
@@ -236,6 +238,12 @@ const char* csv_writer_get_filename(struct csv_writer*);
  * memory for the file name.
  */
 char* csv_writer_detach_filename(struct csv_writer*);
+
+/**
+ * Forcefully change the output FILE*. Useful for
+ * redirecting temporarily
+ */
+void csv_writer_set_file(struct csv_writer*, FILE*);
 
 /**
  * Set output delimiter

@@ -178,9 +178,25 @@ const char* csv_writer_get_delim(struct csv_writer* self)
 	return string_c_str(&self->_in->delim);
 }
 
+struct csv_field csv_writer_get_delim_field(struct csv_writer* self)
+{
+	return (struct csv_field) {
+		 self->_in->delim.data
+		,self->_in->delim.size
+	};
+}
+
 const char* csv_writer_get_terminator(struct csv_writer* self)
 {
 	return string_c_str(&self->_in->rec_terminator);
+}
+
+struct csv_field csv_writer_get_terminator_field(struct csv_writer* self)
+{
+	return (struct csv_field) {
+		 self->_in->rec_terminator.data
+		,self->_in->rec_terminator.size
+	};
 }
 
 FILE* csv_writer_get_file(struct csv_writer* self)
@@ -210,6 +226,11 @@ char* csv_writer_detach_filename(struct csv_writer* self)
 		return NULL;
 	}
 	return string_export(&self->_in->filename);
+}
+
+void csv_writer_set_file(struct csv_writer* self, FILE* out_file)
+{
+	self->_in->file = out_file;
 }
 
 void csv_writer_set_delim(struct csv_writer* self, const char* delim)
