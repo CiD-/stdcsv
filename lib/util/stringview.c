@@ -8,34 +8,19 @@ stringview* stringview_construct(stringview* sv, char* s, unsigned len)
 	return sv;
 }
 
-stringview* stringview_construct_from_string(stringview* sv, string* s)
-{
-	stringview_set_string(sv, s);
-	return sv;
-}
-
 void stringview_set(stringview* sv, const char* s)
 {
-	*sv = (stringview) {
-		 s
-		,strlen(s)
-	};
+	*sv = (stringview) {s, strlen(s)};
 }
 
 void stringview_nset(stringview* sv, const char* s, unsigned n)
 {
-	*sv = (stringview) {
-		 s
-		,n
-	};
+	*sv = (stringview) {s, n};
 }
 
 void stringview_set_string(stringview* sv, string* s)
 {
-	*sv = (stringview) {
-		 s->data
-		,s->size
-	};
+	*sv = (stringview) {s->data, s->size};
 }
 
 int stringview_compare_nocase(const stringview* sv0, const stringview* sv1)
@@ -73,7 +58,7 @@ int stringview_compare_rtrim(const stringview* sv0, const stringview* sv1)
 	const unsigned char *s1 = (unsigned char*) sv1->data;
 
 	int ret = 0;
-	int i = 0;
+	unsigned i = 0;
 	for (; ret == 0 && i < short_sv->len; ++i) {
 		ret = s0[i] - s1[i];
 	}
@@ -100,7 +85,7 @@ int stringview_compare_nocase_rtrim(const stringview* sv0, const stringview* sv1
 	const unsigned char *s1 = (unsigned char*) sv1->data;
 
 	int ret = 0;
-	int i = 0;
+	unsigned i = 0;
 	for (; ret == 0 && i < short_sv->len; ++i) {
 		ret = tolower (s0[i]) - tolower (s1[i]);
 	}

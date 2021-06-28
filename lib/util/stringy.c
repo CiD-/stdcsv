@@ -27,18 +27,23 @@ string* string_construct_from_string(string* dest, string* src)
 	return dest;
 }
 
-string* string_from_stringview(struct stringview* sv)
+string* string_from_stringview(const struct stringview* sv)
 {
 	string* new_string = new_(string);
 	string_copy_from_stringview(new_string, sv);
 	return new_string;
 }
 
-string* string_construct_from_stringview(string* s, struct stringview* sv)
+string* string_construct_from_stringview(string* s, const struct stringview* sv)
 {
 	string_construct(s);
 	string_copy_from_stringview(s, sv);
 	return s;
+}
+
+stringview string_get_stringview(string* s)
+{
+	return (stringview) {s->data, s->size};
 }
 
 string* string_from_char_ptr(const char* src)
@@ -79,12 +84,12 @@ string* string_construct_take(string* s, char* src)
 	return s;
 }
 
-void string_copy_from_stringview(string* s, struct stringview* sv)
+void string_copy_from_stringview(string* s, const struct stringview* sv)
 {
 	string_strncpy(s, sv->data, sv->len);
 }
 
-void string_append_stringview(string* dest, struct stringview* sv)
+void string_append_stringview(string* dest, const struct stringview* sv)
 {
 	size_t index = dest->size;
 	vec_resize(dest, dest->size + sv->len);
@@ -157,7 +162,7 @@ size_t string_sprintf(string* s, const char* fmt, ...)
 	return len;
 }
 
-const char* string_c_str(string* s)
+const char* string_c_str(const string* s)
 {
 	return (const char*) s->data;
 }
@@ -175,7 +180,7 @@ void string_clear(string* s)
 	_null_terminate_(s);
 }
 
-void string_copy(string* dest, string* src)
+void string_copy(string* dest, const string* src)
 {
 	vec_resize(dest, src->size);
 	memcpy(dest->data, src->data, src->size);
@@ -186,4 +191,49 @@ void string_resize(string* s, size_t n)
 {
 	vec_resize(s, n);
 	_null_terminate_(s);
+}
+
+const char* string_find_replace_one(string* s,
+                                    const char* oldstr,
+                                    const char* newstr,
+                                    size_t begin_idx)
+{
+	unsigned oldlen = strlen(oldstr);
+	unsigned newlen = strlen(newstr);
+
+	char* begin = vec_at(s, begin_idx);
+	char* pos = memmem(begin, s->size, oldstr, oldlen);
+
+	if (pos == NULL) {
+		return vec_end(s);
+	}
+
+	int idx = pos - begin;
+
+	unsigned i = 0;
+	for (; i < oldlen && i < newlen; ++i) {
+		begin[idx++] = newstr[i];
+	}
+
+	if (oldlen == newlen) {
+		return begin + idx;
+	}
+
+	if (i < oldlen) {
+		vec_erase_at(s, idx + begin_idx, oldlen - i);
+	} else { /* j < newstr.len */
+		vec_insert_at(s, idx + begin_idx, &newstr[i], newlen - i);
+	}
+
+	return begin + newlen;
+}
+
+void string_find_replace(string* s, const char* oldstr, const char* newstr)
+{
+	unsigned i = 0;
+	for (; i < s->size; ++i) {
+		const char* next =
+		        string_find_replace_one(s, oldstr, newstr, i);
+		i += next - (const char*)vec_begin(s);
+	}
 }

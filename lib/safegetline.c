@@ -82,29 +82,27 @@ int sgetline(FILE *f, char **buf, size_t* buflen, size_t* len)
 	return _getline_runner(f, buf, buflen, len, 0);
 }
 
-
 /**
- * Unlike sgetline sgetline_mmap, will not read a 
+ * Unlike sgetline sgetline_mmap, will not read a
  * carriage return only line ending file. I ignored it
  * because I want to go *FAST*.  I don't have any proof
  * that this is any faster, so as it turns out, I'm just
  * *LAZY*
  */
 
-int sappline_mmap(const char* mmap, 
-		  char** line, 
-		  size_t* bufidx, 
-		  size_t* len, 
-		  size_t limit)
+int sappline_mmap(
+        const char* mmap, char** line, size_t* bufidx, size_t* len, size_t limit)
 {
 	const char* org_line = *line;
 	size_t org_idx = *bufidx;
-	int ret = sgetline_mmap(mmap, line, bufidx, len, limit);
+
+	size_t appended_len = 0;
+	int ret = sgetline_mmap(mmap, line, bufidx, &appended_len, limit);
 	if (ret == EOF) {
 		return EOF;
 	}
 	*line = (char*)org_line;
-	*len += (*bufidx - org_idx) + 1;
+	*len += (*bufidx - org_idx);
 	return 0;
 }
 
