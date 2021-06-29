@@ -14,6 +14,7 @@ void parse_setup(void)
 void parse_teardown(void)
 {
         csv_reader_free(reader);
+	csv_record_free(record);
 }
 
 /**

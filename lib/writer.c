@@ -10,7 +10,6 @@
 #include "misc.h"
 #include "util/util.h"
 
-
 struct csv_writer* csv_writer_new()
 {
 	struct csv_writer* self = malloc_(sizeof(*self));
@@ -21,21 +20,21 @@ struct csv_writer* csv_writer_construct(struct csv_writer* self)
 	init_sig();
 
 	*self = (struct csv_writer) {
-		 NULL          /* _in */
-		,QUOTE_RFC4180 /* quotes */
+	        NULL,         /* _in */
+	        QUOTE_RFC4180 /* quotes */
 	};
 
 	self->_in = malloc_(sizeof(*self->_in));
 	*self->_in = (struct csv_write_internal) {
-		 stdout /* file */
-		,NULL   /* tmp_node */
-		,{ 0 }  /* tempname */
-		,{ 0 }  /* filename */
-		,{ 0 }  /* buffer */
-		,{ 0 }  /* delim */
-		,{ 0 }  /* rec_terminator */
-		,0      /* record_len */
-		,false  /* is_detached */
+	        stdout, /* file */
+	        NULL,   /* tmp_node */
+	        {0},    /* tempname */
+	        {0},    /* filename */
+	        {0},    /* buffer */
+	        {0},    /* delim */
+	        {0},    /* rec_terminator */
+	        0,      /* record_len */
+	        false   /* is_detached */
 	};
 
 	string_construct(&self->_in->tempname);
@@ -101,13 +100,12 @@ int csv_write_field(struct csv_writer* self, const struct csv_field* field)
 				return _write_field_manually(self, field);
 			}
 		}
-		if (quote_current_field
-		 || memchr(field->data, '\r', field->len)
-		 || memchr(field->data, '\n', field->len)
-		 || memmem(field->data,
-			   field->len,
-			   self->_in->delim.data,
-			   self->_in->delim.size)) {
+		if (quote_current_field || memchr(field->data, '\r', field->len)
+		    || memchr(field->data, '\n', field->len)
+		    || memmem(field->data,
+		              field->len,
+		              self->_in->delim.data,
+		              self->_in->delim.size)) {
 			fprintf(self->_in->file, "\"%.*s\"", field->len, field->data);
 			return field->len + 2;
 		}
@@ -137,8 +135,7 @@ int csv_writer_reset(struct csv_writer* self)
 {
 	csvfail_if_(self->_in->file == stdout, "Cannot reset stdout");
 	csvfail_if_(!self->_in->file, "No file to reset");
-	csvfail_if_(fclose(self->_in->file) == EOF,
-		    string_c_str(&self->_in->tempname));
+	csvfail_if_(fclose(self->_in->file) == EOF, string_c_str(&self->_in->tempname));
 	self->_in->file = fopen(string_c_str(&self->_in->tempname), "w");
 	csvfail_if_(!self->_in->file, string_c_str(&self->_in->tempname));
 
@@ -180,10 +177,7 @@ const char* csv_writer_get_delim(struct csv_writer* self)
 
 struct csv_field csv_writer_get_delim_field(struct csv_writer* self)
 {
-	return (struct csv_field) {
-		 self->_in->delim.data
-		,self->_in->delim.size
-	};
+	return (struct csv_field) {self->_in->delim.data, self->_in->delim.size};
 }
 
 const char* csv_writer_get_terminator(struct csv_writer* self)
@@ -193,10 +187,8 @@ const char* csv_writer_get_terminator(struct csv_writer* self)
 
 struct csv_field csv_writer_get_terminator_field(struct csv_writer* self)
 {
-	return (struct csv_field) {
-		 self->_in->rec_terminator.data
-		,self->_in->rec_terminator.size
-	};
+	return (struct csv_field) {self->_in->rec_terminator.data,
+	                           self->_in->rec_terminator.size};
 }
 
 FILE* csv_writer_get_file(struct csv_writer* self)
@@ -245,8 +237,7 @@ void csv_writer_set_line_ending(struct csv_writer* self, const char* ending)
 
 int csv_writer_open(struct csv_writer* self, const char* filename)
 {
-	csvfail_if_ (csv_writer_isopen(self),
-		     "write file already open");
+	csvfail_if_(csv_writer_isopen(self), "write file already open");
 	csv_writer_set_filename(self, filename);
 	return csv_writer_mktmp(self);
 }
@@ -262,8 +253,7 @@ int csv_writer_close(struct csv_writer* self)
 	if (self->_in->file == stdout)
 		return CSV_GOOD;
 
-	csvfail_if_(fclose(self->_in->file) == EOF,
-			   string_c_str(&self->_in->tempname));
+	csvfail_if_(fclose(self->_in->file) == EOF, string_c_str(&self->_in->tempname));
 	self->_in->file = NULL;
 
 	if (self->_in->is_detached) {
@@ -297,4 +287,3 @@ int csv_writer_close(struct csv_writer* self)
 	self->_in->tmp_node = NULL;
 	return CSV_GOOD;
 }
-

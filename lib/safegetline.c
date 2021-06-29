@@ -3,15 +3,14 @@
 
 #include <string.h>
 
-int _safegetline(FILE *fp, char* buffer, size_t* buflen, size_t* off)
+int _safegetline(FILE* fp, char* buffer, size_t* buflen, size_t* off)
 {
-	char *end = buffer + *buflen - 1;
-	char *dst = buffer + *off;
+	char* end = buffer + *buflen - 1;
+	char* dst = buffer + *off;
 	int endfound = false;
 	int c = 0;
 
-	while (!endfound && dst < end && (c = getc(fp)) != EOF)
-	{
+	while (!endfound && dst < end && (c = getc(fp)) != EOF) {
 		*dst++ = c;
 		if (c == '\r') {
 			c = getc(fp);
@@ -54,7 +53,7 @@ int _getline_runner(FILE* f, char** buf, size_t* buflen, size_t* len, size_t off
 	size_t offset = off;
 	int ret = 0;
 	do {
-		if(offset + 1 >= *buflen)
+		if (offset + 1 >= *buflen)
 			increase_buffer(buf, buflen);
 		ret = _safegetline(f, *buf, buflen, &offset);
 	} while (ret == EOF - 1);
@@ -65,9 +64,9 @@ int _getline_runner(FILE* f, char** buf, size_t* buflen, size_t* len, size_t off
 	return ret;
 }
 
-int sappline(FILE *f, char **buf, size_t* buflen, size_t* len)
+int sappline(FILE* f, char** buf, size_t* buflen, size_t* len)
 {
-	if (*len+1 > *buflen) {
+	if (*len + 1 > *buflen) {
 		increase_buffer(buf, buflen);
 	}
 	char* end = *buf + *len;
@@ -77,7 +76,7 @@ int sappline(FILE *f, char **buf, size_t* buflen, size_t* len)
 	return _getline_runner(f, buf, buflen, len, *len);
 }
 
-int sgetline(FILE *f, char **buf, size_t* buflen, size_t* len)
+int sgetline(FILE* f, char** buf, size_t* buflen, size_t* len)
 {
 	return _getline_runner(f, buf, buflen, len, 0);
 }
@@ -106,27 +105,32 @@ int sappline_mmap(
 	return 0;
 }
 
-int sgetline_mmap(const char* mmap,
-		  char** line,
-		  size_t* bufidx,
-		  size_t* len,
-		  size_t limit)
+int sgetline_mmap(
+        const char* mmap, char** line, size_t* bufidx, size_t* len, size_t limit)
 {
 	if (*bufidx == limit) {
 		return EOF;
 	}
-        switch (mmap[*bufidx]) {
+	switch (mmap[*bufidx]) {
 	case '\r':
 		*bufidx += 2;
 		break;
 	case '\n':
 		*bufidx += 1;
-	default:
-		;
+	default:;
 	}
 
-	*line = (char*) &mmap[*bufidx];
+	*line = (char*)&mmap[*bufidx];
 	char* eol = memchr(*line, '\n', limit - *bufidx);
+
+	/* This if block is to catch the special case
+	 * of a file ending with a blank line. In order
+	 * to match sgetline, we want to EOF here.
+	 */
+	if (eol == *line && limit - *bufidx <= 1) {
+		*bufidx = limit;
+		eol = NULL;
+	}
 
 	/* last read */
 	if (eol == NULL) {
@@ -135,7 +139,7 @@ int sgetline_mmap(const char* mmap,
 		return (*len) ? 0 : EOF;
 	}
 
-	if (*(eol-1) == '\r') {
+	if (*bufidx > 1 && *(eol - 1) == '\r') {
 		--eol;
 	}
 

@@ -16,8 +16,8 @@
  * we do not expose our internal vector type.
  */
 struct csv_record_internal {
-	vec* field_data;     /* vec<string> */
-	vec* _fields;        /* vec<struct csv_field> */
+	vec* field_data; /* vec<string> */
+	vec* _fields;    /* vec<struct csv_field> */
 	size_t rec_alloc;
 	unsigned field_alloc;
 };
@@ -52,6 +52,5 @@ struct csv_write_internal {
 	int reclen;
 	_Bool is_detached;
 };
-
 
 #endif

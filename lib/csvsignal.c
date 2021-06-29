@@ -10,7 +10,7 @@
  * sigset_t and sa_flags only set to shut up valgrind
  */
 static struct sigaction act;
-static sigset_t vg_shutup = { {0} };
+static sigset_t vg_shutup = {{0}};
 static int _signals_ready = false;
 static queue* _tmp_file_head = NULL;
 
@@ -58,7 +58,6 @@ void tmp_removeall()
 	while (_tmp_file_head) {
 		string* tmp = queue_dequeue(&_tmp_file_head);
 		tmp_remove_file(string_c_str(tmp));
-		delete_ (string, tmp);
+		delete_(string, tmp);
 	}
 }
-

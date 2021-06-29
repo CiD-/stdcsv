@@ -5,12 +5,12 @@
 extern "C" {
 #endif
 
-#define CSV_GOOD                0
-#define CSV_FAIL                -5
-#define CSV_RESET               -100
-#define CSV_NORMAL_OPEN         -2
-#define CSV_BUFFER_FACTOR       128
-#define CSV_MAX_NEWLINES        40
+#define CSV_GOOD          0
+#define CSV_FAIL          -5
+#define CSV_RESET         -100
+#define CSV_NORMAL_OPEN   -2
+#define CSV_BUFFER_FACTOR 128
+#define CSV_MAX_NEWLINES  40
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -182,11 +182,15 @@ int csv_reader_close(struct csv_reader*);
  */
 int csv_parse(struct csv_reader*, struct csv_record*, const char*);
 int csv_nparse(struct csv_reader*, struct csv_record*, const char*, unsigned char_limit);
-int csv_parse_to(struct csv_reader*, struct csv_record*, const char*, unsigned field_limit);
-int csv_nparse_to(struct csv_reader*, struct csv_record*, const char*, unsigned char_limit, unsigned field_limit);
-
-
-
+int csv_parse_to(struct csv_reader*,
+                 struct csv_record*,
+                 const char*,
+                 unsigned field_limit);
+int csv_nparse_to(struct csv_reader*,
+                  struct csv_record*,
+                  const char*,
+                  unsigned char_limit,
+                  unsigned field_limit);
 
 /**
  * CSV Writer
@@ -230,7 +234,6 @@ FILE* csv_writer_get_file(struct csv_writer*);
  * retrieve file name to be written to
  */
 const char* csv_writer_get_filename(struct csv_writer*);
-
 
 /**
  * Retrieve file name, and remove it from

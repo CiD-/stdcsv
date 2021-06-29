@@ -16,7 +16,6 @@
 #include "util/stringview.h"
 #include "util/util.h"
 
-
 /**
  * Internal prototypes
  */
@@ -27,7 +26,7 @@
  * these delimiters are found, use comma. If self->delimiter was set
  * externally, simply update self->_in->delimlen and return.
  */
-void csv_determine_delimiter(struct csv_reader*, const char* header, unsigned limit);
+void csv_determine_delimiter(struct csv_reader*, const char* header, unsigned byte_limit);
 
 /**
  * csv_record_grow allocates space for the fields
@@ -40,14 +39,15 @@ void csv_record_grow(struct csv_record*);
  * of input for an in-line break.
  */
 int csv_append_line(struct csv_reader* self, struct csv_record*);
+
 /**
  * Simple CSV parsing. Disregard all quotes.
  */
 int csv_parse_none(struct csv_reader*,
-		   struct csv_record*,
-		   const char** line,
-		   size_t* recidx,
-		   unsigned* limit);
+                   struct csv_record*,
+                   const char** line,
+                   size_t* recidx,
+                   unsigned* byte_limit);
 
 /**
  * Parse line respecting quotes. Quotes within
@@ -56,21 +56,20 @@ int csv_parse_none(struct csv_reader*,
  * be treated as qualified.
  */
 int csv_parse_weak(struct csv_reader*,
-		   struct csv_record*,
-		   const char** line,
-		   size_t* recidx,
-		   unsigned* limit);
+                   struct csv_record*,
+                   const char** line,
+                   size_t* recidx,
+                   unsigned* byte_limit);
 
 /**
  * Parse line according to RFC-4180 guidelines.
  * More info: https://tools.ietf.org/html/rfc4180
  */
 int csv_parse_rfc4180(struct csv_reader* self,
-		      struct csv_record*,
-		      const char** line,
-		      size_t* recidx,
-		      unsigned* limit);
-
+                      struct csv_record*,
+                      const char** line,
+                      size_t* recidx,
+                      unsigned* byte_limit);
 
 struct csv_reader* csv_reader_new()
 {
@@ -82,27 +81,27 @@ struct csv_reader* csv_reader_construct(struct csv_reader* reader)
 {
 	init_sig();
 	*reader = (struct csv_reader) {
-		 NULL           /* internal */
-		,QUOTE_RFC4180  /* quotes */
-		,0              /* Normal */
-		,false          /* failsafe_mode */
-		,false          /* trim */
+	        NULL,          /* internal */
+	        QUOTE_RFC4180, /* quotes */
+	        0,             /* Normal */
+	        false,         /* failsafe_mode */
+	        false          /* trim */
 	};
 
 	reader->_in = malloc_(sizeof(*reader->_in));
 	*reader->_in = (struct csv_read_internal) {
-		 stdin /* file */
-		,{ 0 } /* delim */
-		,{ 0 } /* weak_delim */
-		,{ 0 } /* embedded_breaks */
-		,NULL  /* mmap_ptr */
-		,0     /* mmap_offset */
-		,0     /* file_size */
-		,0     /* fd */
-		,0     /* rows */
-		,0     /* embedded_breaks */
-		,0     /* normorg */
-		,false /* is_mmap */
+	        stdin, /* file */
+	        {0},   /* delim */
+	        {0},   /* weak_delim */
+	        {0},   /* embedded_breaks */
+	        NULL,  /* mmap_ptr */
+	        0,     /* mmap_offset */
+	        0,     /* file_size */
+	        0,     /* fd */
+	        0,     /* rows */
+	        0,     /* embedded_breaks */
+	        0,     /* normorg */
+	        false  /* is_mmap */
 	};
 
 	string_construct(&reader->_in->delim);
@@ -146,9 +145,7 @@ const char* csv_reader_get_delim(struct csv_reader* self)
 
 size_t csv_reader_get_file_size(struct csv_reader* self)
 {
-	if (self->_in->is_mmap || (
-			   self->_in->file
-			&& self->_in->file != stdin)) {
+	if (self->_in->is_mmap || (self->_in->file && self->_in->file != stdin)) {
 		return 0;
 	}
 
@@ -164,22 +161,18 @@ void csv_reader_set_delim(struct csv_reader* self, const char* delim)
 	string_sprintf(&self->_in->weak_delim, "\"%s", delim);
 }
 
-void csv_reader_set_embedded_break(struct csv_reader* self,
-		                   const char* embedded_break)
+void csv_reader_set_embedded_break(struct csv_reader* self, const char* embedded_break)
 {
 	string_strcpy(&self->_in->embedded_break, embedded_break);
 }
 
 void csv_record_grow(struct csv_record* self)
 {
-        string* s = vec_add_one(self->_in->field_data);
+	string* s = vec_add_one(self->_in->field_data);
 	string_construct(s);
 	++self->_in->field_alloc;
 
-	struct csv_field field = {
-		 s->data
-		,s->size
-	};
+	struct csv_field field = {s->data, s->size};
 	vec_push_back(self->_in->_fields, &field);
 	self->fields = vec_begin(self->_in->_fields);
 }
@@ -189,20 +182,22 @@ int csv_get_record(struct csv_reader* self, struct csv_record* rec)
 	return csv_get_record_to(self, rec, UINT_MAX);
 }
 
-int csv_get_record_to(struct csv_reader* self, struct csv_record* rec, unsigned field_limit)
+int csv_get_record_to(struct csv_reader* self,
+                      struct csv_record* rec,
+                      unsigned field_limit)
 {
 	int ret = 0;
 	if (self->_in->is_mmap) {
 		ret = sgetline_mmap(self->_in->mmap_ptr,
-				    &rec->rec,
-				    &self->_in->mmap_offset,
-				    &rec->reclen,
-				    self->_in->file_size);
+		                    &rec->rec,
+		                    &self->_in->mmap_offset,
+		                    &rec->reclen,
+		                    self->_in->file_size);
 	} else {
 		ret = sgetline(self->_in->file,
-			       &rec->rec,
-			       &rec->_in->rec_alloc,
-			       &rec->reclen);
+		               &rec->rec,
+		               &rec->_in->rec_alloc,
+		               &rec->reclen);
 	}
 
 	if (ret == EOF) {
@@ -217,18 +212,18 @@ int csv_get_record_to(struct csv_reader* self, struct csv_record* rec, unsigned 
 
 int csv_lowerstandard(struct csv_reader* self)
 {
-	if (!self->failsafe_mode || self->_in->file == stdin) {
-		switch(self->quotes) {
+	if (!self->failsafe_mode || (self->_in->file == stdin && !self->_in->is_mmap)) {
+		switch (self->quotes) {
 		case QUOTE_ALL:
 		case QUOTE_RFC4180:
 			fprintf(stderr,
-				"Line %d: RFC4180 Qualifier issue.\n",
-				1 + self->_in->rows + self->_in->embedded_breaks);
+			        "Line %d: RFC4180 Qualifier issue.\n",
+			        1 + self->_in->rows + self->_in->embedded_breaks);
 			break;
 		case QUOTE_WEAK:
 			fprintf(stderr,
-				"Line %d: Qualifier issue.\n",
-				1 + self->_in->rows + self->_in->embedded_breaks);
+			        "Line %d: Qualifier issue.\n",
+			        1 + self->_in->rows + self->_in->embedded_breaks);
 			break;
 		default:
 			fputs("Unexpected Condition.\n", stderr);
@@ -237,17 +232,17 @@ int csv_lowerstandard(struct csv_reader* self)
 		return CSV_FAIL;
 	}
 
-	switch(self->quotes) {
+	switch (self->quotes) {
 	case QUOTE_ALL:
 	case QUOTE_RFC4180:
 		fprintf(stderr,
-			"Line %d: Qualifier issue. RFC4180 quotes disabled.\n",
-			1 + self->_in->rows + self->_in->embedded_breaks);
+		        "Line %d: Qualifier issue. RFC4180 quotes disabled.\n",
+		        1 + self->_in->rows + self->_in->embedded_breaks);
 		break;
 	case QUOTE_WEAK:
 		fprintf(stderr,
-			"Line %d: Qualifier issue. Quotes disabled.\n",
-			1 + self->_in->rows + self->_in->embedded_breaks);
+		        "Line %d: Qualifier issue. Quotes disabled.\n",
+		        1 + self->_in->rows + self->_in->embedded_breaks);
 		break;
 	default:
 		fputs("Unexpected Condition.\n", stderr);
@@ -268,33 +263,43 @@ void csv_append_empty_field(struct csv_record* self)
 		csv_record_grow(self);
 }
 
-int csv_parse(struct csv_reader *self, struct csv_record *rec, const char* line)
+int csv_parse(struct csv_reader* self, struct csv_record* rec, const char* line)
 {
 	return csv_nparse_to(self, rec, line, UINT_MAX, UINT_MAX);
 }
 
-int csv_nparse(struct csv_reader *self, struct csv_record *rec, const char* line, unsigned limit)
+int csv_nparse(struct csv_reader* self,
+               struct csv_record* rec,
+               const char* line,
+               unsigned byte_limit)
 {
-	return csv_nparse_to(self, rec, line, limit, UINT_MAX);
+	return csv_nparse_to(self, rec, line, byte_limit, UINT_MAX);
 }
 
-int csv_parse_to(struct csv_reader *self, struct csv_record *rec, const char* line, unsigned field_limit)
+int csv_parse_to(struct csv_reader* self,
+                 struct csv_record* rec,
+                 const char* line,
+                 unsigned field_limit)
 {
 	return csv_nparse_to(self, rec, line, UINT_MAX, field_limit);
 }
 
-int csv_nparse_to(struct csv_reader *self, struct csv_record *rec, const char* line, unsigned limit, unsigned field_limit)
+int csv_nparse_to(struct csv_reader* self,
+                  struct csv_record* rec,
+                  const char* line,
+                  unsigned byte_limit,
+                  unsigned field_limit)
 {
 	/* Does libcsv not own `line'? */
-	if (limit == UINT_MAX) {
-		limit = strlen(line);
-		rec->reclen = limit;
+	if (byte_limit == UINT_MAX) {
+		byte_limit = strlen(line);
+		rec->reclen = byte_limit;
 		/* I'm not making any promises... */
 		rec->rec = (char*)line; /* meh */
 	}
 
 	if (string_empty(&self->_in->delim))
-		csv_determine_delimiter(self, line, limit);
+		csv_determine_delimiter(self, line, byte_limit);
 
 	rec->size = 0;
 	//rec->rec = NULL;
@@ -302,7 +307,7 @@ int csv_nparse_to(struct csv_reader *self, struct csv_record *rec, const char* l
 	size_t recidx = 0;
 	int ret = 0;
 
-	while(recidx < limit && rec->size < field_limit) {
+	while (recidx < byte_limit && rec->size < field_limit) {
 		if (rec->size > 0) {
 			recidx += self->_in->delim.size;
 		}
@@ -313,17 +318,17 @@ int csv_nparse_to(struct csv_reader *self, struct csv_record *rec, const char* l
 			quotes = QUOTE_NONE;
 		}
 
-		switch(quotes) {
+		switch (quotes) {
 		case QUOTE_ALL:
 			/* Not seeing a point to implementing this for reading. */
 		case QUOTE_RFC4180:
-			ret = csv_parse_rfc4180(self, rec, &line, &recidx, &limit);
+			ret = csv_parse_rfc4180(self, rec, &line, &recidx, &byte_limit);
 			break;
 		case QUOTE_WEAK:
-			ret = csv_parse_weak(self, rec, &line, &recidx, &limit);
+			ret = csv_parse_weak(self, rec, &line, &recidx, &byte_limit);
 			break;
 		case QUOTE_NONE:
-			ret = csv_parse_none(self, rec, &line, &recidx, &limit);
+			ret = csv_parse_none(self, rec, &line, &recidx, &byte_limit);
 			break;
 		}
 
@@ -348,23 +353,22 @@ int csv_nparse_to(struct csv_reader *self, struct csv_record *rec, const char* l
 	return 0;
 }
 
-int csv_append_line(struct csv_reader* self,
-		    struct csv_record* rec)
+int csv_append_line(struct csv_reader* self, struct csv_record* rec)
 {
 	int ret = 0;
 
 	const char* old_rec = rec->rec;
 	if (self->_in->is_mmap) {
 		ret = sappline_mmap(self->_in->mmap_ptr,
-			            &rec->rec,
-				    &self->_in->mmap_offset,
-				    &rec->reclen,
-				    self->_in->file_size);
+		                    &rec->rec,
+		                    &self->_in->mmap_offset,
+		                    &rec->reclen,
+		                    self->_in->file_size);
 	} else {
 		ret = sappline(self->_in->file,
-			       &rec->rec,
-			       &rec->_in->rec_alloc,
-			       &rec->reclen);
+		               &rec->rec,
+		               &rec->_in->rec_alloc,
+		               &rec->reclen);
 	}
 
 	if (old_rec == rec->rec) {
@@ -391,12 +395,12 @@ int csv_append_line(struct csv_reader* self,
 }
 
 int csv_parse_rfc4180(struct csv_reader* self,
-	              struct csv_record* rec,
-	              const char** line,
-	              size_t* recidx,
-	              unsigned* limit)
+                      struct csv_record* rec,
+                      const char** line,
+                      size_t* recidx,
+                      unsigned* byte_limit)
 {
-	string* field_data = vec_at(rec->_in->field_data, rec->size-1);
+	string* field_data = vec_at(rec->_in->field_data, rec->size - 1);
 	string_clear(field_data);
 
 	unsigned trailing_space = 0;
@@ -410,13 +414,12 @@ int csv_parse_rfc4180(struct csv_reader* self,
 	const char* begin = &(*line)[++(*recidx)];
 	const char* ptr = begin;
 	const char* end = NULL;
-	const char* rec_end = &(*line)[*limit];
+	const char* rec_end = &(*line)[*byte_limit];
 
 	for (;;) {
-		for (; qualified && end != rec_end;
-		       ptr = end + self->_in->delim.size) {
+		for (; qualified && end != rec_end; ptr = end + self->_in->delim.size) {
 			end = memmem(ptr,
-			             *limit - *recidx,
+			             *byte_limit - *recidx,
 			             self->_in->delim.data,
 			             self->_in->delim.size);
 
@@ -445,9 +448,7 @@ int csv_parse_rfc4180(struct csv_reader* self,
 						keep = false;
 					last_was_quote = false;
 				}
-				if (!keep || (first_char
-					   && self->trim
-					   && isspace(*it))) {
+				if (!keep || (first_char && self->trim && isspace(*it))) {
 					continue;
 				}
 				string_push_back(field_data, *it);
@@ -464,9 +465,7 @@ int csv_parse_rfc4180(struct csv_reader* self,
 			break;
 
 		/** In-line break found **/
-		if (qualified 
-		 && !rec->_in->rec_alloc 
-		 && !self->_in->is_mmap) {
+		if (qualified && !rec->_in->rec_alloc && !self->_in->is_mmap) {
 			return CSV_RESET;
 		}
 
@@ -480,15 +479,15 @@ int csv_parse_rfc4180(struct csv_reader* self,
 		}
 		*line = rec->rec;
 		begin = &(*line)[*recidx];
-		ptr = &(*line)[*limit+1];
-		*limit = rec->reclen;
-		rec_end = &(*line)[*limit];
+		ptr = &(*line)[*byte_limit + 1];
+		*byte_limit = rec->reclen;
+		rec_end = &(*line)[*byte_limit];
 	}
 
 	if (trailing_space) {
 		string_resize(field_data, field_data->size - trailing_space);
 	}
-	struct csv_field* field = vec_at(rec->_in->_fields, rec->size-1);
+	struct csv_field* field = vec_at(rec->_in->_fields, rec->size - 1);
 	field->data = field_data->data;
 	field->len = field_data->size;
 
@@ -499,12 +498,12 @@ int csv_parse_rfc4180(struct csv_reader* self,
 }
 
 int csv_parse_weak(struct csv_reader* self,
-	           struct csv_record* rec,
-		   const char** line,
-		   size_t* recidx,
-		   unsigned* limit)
+                   struct csv_record* rec,
+                   const char** line,
+                   size_t* recidx,
+                   unsigned* byte_limit)
 {
-	string* field_data = vec_at(rec->_in->field_data, rec->size-1);
+	string* field_data = vec_at(rec->_in->field_data, rec->size - 1);
 	string_clear(field_data);
 	unsigned trailing_space = 0;
 	unsigned nl_count = 0;
@@ -512,21 +511,20 @@ int csv_parse_weak(struct csv_reader* self,
 
 	const char* begin = &(*line)[++(*recidx)];
 	const char* end = memmem(begin,
-	                         *limit - *recidx,
+	                         *byte_limit - *recidx,
 	                         self->_in->weak_delim.data,
 	                         self->_in->weak_delim.size);
 
 	while (end == NULL) {
-		end = &(*line)[*limit];
+		end = &(*line)[*byte_limit];
 		/* Quote before EOL */
-		if (*(end-1) == '"' && begin != end) {
+		if (*(end - 1) == '"' && begin != end) {
 			--end;
 			break;
 		}
 
 		/* Cannot reset if we don't own source */
-		if (!rec->_in->rec_alloc 
-		 && !self->_in->is_mmap) {
+		if (!rec->_in->rec_alloc && !self->_in->is_mmap) {
 			return CSV_RESET;
 		}
 
@@ -542,22 +540,19 @@ int csv_parse_weak(struct csv_reader* self,
 		}
 		*line = rec->rec;
 		begin = &(*line)[*recidx];
-		unsigned old_limit = *limit;
-		*limit = rec->reclen;
+		unsigned old_limit = *byte_limit;
+		*byte_limit = rec->reclen;
 		end = memmem(*line + old_limit,
-		             *limit - old_limit,
+		             *byte_limit - old_limit,
 		             self->_in->weak_delim.data,
 		             self->_in->weak_delim.size);
-
 	}
 
 	vec_reserve(field_data, end - begin);
 
 	const char* it = begin;
 	for (; it < end; ++it) {
-		if (first_char
-		 && self->trim
-		 && isspace(*it)) {
+		if (first_char && self->trim && isspace(*it)) {
 			continue;
 		}
 		string_push_back(field_data, *it);
@@ -569,11 +564,10 @@ int csv_parse_weak(struct csv_reader* self,
 			trailing_space = 0;
 	}
 
-
 	if (trailing_space) {
 		string_resize(field_data, field_data->size - trailing_space);
 	}
-	struct csv_field* field = vec_at(rec->_in->_fields, rec->size-1);
+	struct csv_field* field = vec_at(rec->_in->_fields, rec->size - 1);
 	field->data = field_data->data;
 	field->len = field_data->size;
 
@@ -585,28 +579,26 @@ int csv_parse_weak(struct csv_reader* self,
 }
 
 int csv_parse_none(struct csv_reader* self,
-		   struct csv_record* rec,
-		   const char** line,
-		   size_t* recidx,
-		   unsigned* limit)
+                   struct csv_record* rec,
+                   const char** line,
+                   size_t* recidx,
+                   unsigned* byte_limit)
 {
 	unsigned trailing_space = 0;
 	_Bool first_char = true;
 
 	const char* begin = &(*line)[*recidx];
 	const char* end = memmem(begin,
-	                         *limit - *recidx,
+	                         *byte_limit - *recidx,
 	                         self->_in->delim.data,
 	                         self->_in->delim.size);
 	if (end == NULL) {
-		end = &(*line)[*limit];
+		end = &(*line)[*byte_limit];
 	}
 
 	const char* it = begin;
 	for (; it != end; ++it) {
-		if (first_char
-		 && self->trim
-		 && isspace(*it)) {
+		if (first_char && self->trim && isspace(*it)) {
 			++begin;
 			++(*recidx);
 			continue;
@@ -619,16 +611,18 @@ int csv_parse_none(struct csv_reader* self,
 			trailing_space = 0;
 	}
 
-	struct csv_field* field = vec_at(rec->_in->_fields, rec->size-1);
+	struct csv_field* field = vec_at(rec->_in->_fields, rec->size - 1);
 	field->data = begin;
-        field->len = end - begin - trailing_space;
+	field->len = end - begin - trailing_space;
 
 	*recidx += (end - begin);
 
 	return CSV_GOOD;
 }
 
-void csv_determine_delimiter(struct csv_reader* self, const char* header, unsigned limit)
+void csv_determine_delimiter(struct csv_reader* self,
+                             const char* header,
+                             unsigned byte_limit)
 {
 	if (!string_empty(&self->_in->delim)) {
 		return;
@@ -640,7 +634,7 @@ void csv_determine_delimiter(struct csv_reader* self, const char* header, unsign
 	int count = 0;
 	int max_count = 0;
 	for (; i < strlen(delims); ++i) {
-		count = charncount(header, delims[i], limit);
+		count = charncount(header, delims[i], byte_limit);
 		if (count > max_count) {
 			sel = i;
 			max_count = count;
@@ -677,12 +671,8 @@ int csv_reader_open_mmap(struct csv_reader* self, const char* file_name)
 	csvfail_if_(fstat(self->_in->fd, &sb) == -1, file_name);
 	self->_in->file_size = sb.st_size;
 
-	self->_in->mmap_ptr = mmap(NULL,
-			           sb.st_size,
-				   PROT_READ,
-				   MAP_PRIVATE,
-				   self->_in->fd,
-				   0);
+	self->_in->mmap_ptr =
+	        mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, self->_in->fd, 0);
 	csvfail_if_(self->_in->mmap_ptr == MAP_FAILED, "mmap");
 	self->_in->is_mmap = true;
 	csv_reader_madvise(self, MADV_SEQUENTIAL);
@@ -692,32 +682,31 @@ int csv_reader_open_mmap(struct csv_reader* self, const char* file_name)
 
 int csv_reader_madvise(struct csv_reader* self, int advice)
 {
-	csvfail_if_ (!self->_in->is_mmap, "Cannot advise unless mmap");
+	csvfail_if_(!self->_in->is_mmap, "Cannot advise unless mmap");
 	madvise(self->_in->mmap_ptr, self->_in->file_size, advice);
 	return CSV_GOOD;
 }
 
 int csv_reader_seek(struct csv_reader* self, size_t offset)
 {
-	csvfail_if_ (offset > self->_in->file_size,
-		    "offset out of range");
+	csvfail_if_(offset > self->_in->file_size, "offset out of range");
 
 	if (self->_in->is_mmap) {
 		self->_in->mmap_offset = offset;
 		return CSV_GOOD;
 	}
 
-	csvfail_if_ (!self->_in->file, "<null> file");
-        csvfail_if_ (self->_in->file == stdin, "cannot seek stdin");
+	csvfail_if_(!self->_in->file, "<null> file");
+	csvfail_if_(self->_in->file == stdin, "cannot seek stdin");
 	int ret = fseek(self->_in->file, offset, SEEK_SET);
-	csvfail_if_ (ret, "fseek");
+	csvfail_if_(ret, "fseek");
 
 	return CSV_GOOD;
 }
 
 int csv_reader_goto(struct csv_reader* self, const char* location)
 {
-	csvfail_if_ (!self->_in->is_mmap, "function `goto' only for mmap");
+	csvfail_if_(!self->_in->is_mmap, "function `goto' only for mmap");
 	return csv_reader_seek(self, location - self->_in->mmap_ptr);
 }
 
@@ -725,12 +714,10 @@ int csv_reader_close(struct csv_reader* self)
 {
 	if (self->_in->is_mmap) {
 		self->_in->is_mmap = false;
-		csvfail_if_ (munmap(self->_in->mmap_ptr,
-				    self->_in->file_size),
-			     "munmap");
-		csvfail_if_ (close(self->_in->fd), "close");
+		csvfail_if_(munmap(self->_in->mmap_ptr, self->_in->file_size), "munmap");
+		csvfail_if_(close(self->_in->fd), "close");
 	} else if (self->_in->file && self->_in->file != stdin) {
-		csvfail_if_ (fclose(self->_in->file), "fclose");
+		csvfail_if_(fclose(self->_in->file), "fclose");
 	}
 	return CSV_GOOD;
 }
