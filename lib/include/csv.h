@@ -89,15 +89,16 @@ void csv_record_destroy(struct csv_record* self);
  * array of struct csv_field AS WELL AS
  * each individual data field:
  *
- * int n = rec->size;
- * struct csv_field* fields = csv_release_data(rec);
+ *     int n = rec->size;
+ *     struct csv_field* fields = csv_release_data(rec);
  *
- * .... DO STUFF ....
+ *     // .... DO STUFF ....
  *
- * for (int i = 0; i < n; ++i) {
- *         free(fields[i].data);
- * }
- * free(fields);
+ *     for (int i = 0; i < n; ++i) {
+ *             free(fields[i].data);
+ *     }
+ *     free(fields);
+ *
  */
 struct csv_field* csv_record_release_data(struct csv_record* rec);
 
@@ -266,13 +267,13 @@ int csv_writer_open(struct csv_writer*, const char*);
 /**
  * All writing is done to temp files that are
  * then renamed. The renaming occurs when you
- * call csv_writer_close Therefore, the
+ * call csv_writer_close. Therefore, the
  * following is legal:
  *
- * csv_writer_open(writer, "foo.txt");
- * csv_write_record(writer, record);
- * csv_writer_set_filename(writer, "bar.txt");
- * csv_writer_close(writer);
+ *     csv_writer_open(writer, "foo.txt");
+ *     csv_write_record(writer, record);
+ *     csv_writer_set_filename(writer, "bar.txt");
+ *     csv_writer_close(writer);
  *
  * The data from record will be stored in
  * bar.txt and foo.txt does not exist.
