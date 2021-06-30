@@ -139,7 +139,7 @@ int sgetline_mmap(
 		return (*len) ? 0 : EOF;
 	}
 
-	if (*bufidx > 1 && *(eol - 1) == '\r') {
+	if (eol > mmap && *(eol - 1) == '\r') {
 		--eol;
 	}
 
