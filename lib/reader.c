@@ -259,7 +259,7 @@ int csv_lowerstandard(struct csv_reader* self)
 
 void csv_append_empty_field(struct csv_record* self)
 {
-	if (++(self->size) > self->_in->field_alloc)
+	if (++(self->size) > (int)self->_in->field_alloc)
 		csv_record_grow(self);
 }
 
@@ -307,7 +307,7 @@ int csv_nparse_to(struct csv_reader* self,
 	size_t recidx = 0;
 	int ret = 0;
 
-	while (recidx < byte_limit && rec->size < field_limit) {
+	while (recidx < byte_limit && (unsigned)rec->size < field_limit) {
 		if (rec->size > 0) {
 			recidx += self->_in->delim.size;
 		}

@@ -92,7 +92,6 @@ int csv_write_field(struct csv_writer* self, const struct csv_field* field)
 {
 	if (self->quotes != QUOTE_NONE) {
 		_Bool quote_current_field = false;
-		const char* c = field->data;
 
 		if (memchr(field->data, '"', field->len)) {
 			quote_current_field = true;
@@ -148,7 +147,7 @@ int csv_writer_mktmp(struct csv_writer* self)
 	char* filename_cp = NULL;
 	if (!string_empty(&self->_in->filename)) {
 		filename_cp = strdup(string_c_str(&self->_in->filename));
-		char* targetdir = dirname(filename_cp);
+		targetdir = dirname(filename_cp);
 	}
 	string_strcpy(&self->_in->tempname, targetdir);
 	string_strcat(&self->_in->tempname, "/csv_XXXXXX");
