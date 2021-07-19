@@ -39,7 +39,7 @@ struct vec* vec_construct(struct vec*, size_t);
 #define vec_construct_(v_, T_) vec_construct(v_, sizeof(T_))
 void vec_destroy(struct vec*);
 
-_Bool vec_empty(const struct vec*);
+bool vec_empty(const struct vec*);
 void* vec_at(const struct vec*, size_t);
 void* vec_begin(const struct vec*);
 void* vec_back(const struct vec*);
@@ -50,9 +50,10 @@ void vec_resize(struct vec*, size_t);
 void vec_resize_and_zero(struct vec*, size_t);
 void vec_clear(struct vec*);
 void vec_shrink_to_fit(struct vec*);
-void vec_pop_back(struct vec*);
+void* vec_pop_back(struct vec*);
 
 void* vec_add_one(struct vec*);
+void* vec_add_one_front(struct vec*);
 void vec_set(struct vec*, size_t, const void*);
 void vec_push_back(struct vec*, const void*);
 
