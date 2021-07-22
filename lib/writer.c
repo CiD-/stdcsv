@@ -91,7 +91,7 @@ int _write_field_manually(struct csv_writer* self, const struct csv_field* field
 int csv_write_field(struct csv_writer* self, const struct csv_field* field)
 {
 	if (self->quotes != QUOTE_NONE) {
-		_Bool quote_current_field = false;
+		bool quote_current_field = (self->quotes == QUOTE_ALL);
 
 		if (memchr(field->data, '"', field->len)) {
 			quote_current_field = true;
