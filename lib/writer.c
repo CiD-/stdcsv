@@ -101,10 +101,11 @@ int csv_write_field(struct csv_writer* self, const struct csv_field* field)
 		}
 		if (quote_current_field || memchr(field->data, '\r', field->len)
 		    || memchr(field->data, '\n', field->len)
-		    || memmem(field->data,
-		              field->len,
-		              self->_in->delim.data,
-		              self->_in->delim.size)) {
+		    || (self->_in->delim.size > 0
+		        && memmem(field->data,
+		                  field->len,
+		                  self->_in->delim.data,
+		                  self->_in->delim.size))) {
 			fprintf(self->_in->file, "\"%.*s\"", field->len, field->data);
 			return field->len + 2;
 		}
