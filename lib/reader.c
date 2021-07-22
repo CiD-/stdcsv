@@ -725,8 +725,8 @@ int csv_reader_close(struct csv_reader* self)
 int csv_reader_reset(struct csv_reader* self)
 {
 	self->normal = self->_in->normorg;
-	string_clear(&self->_in->delim);
-	string_clear(&self->_in->weak_delim);
+	//string_clear(&self->_in->delim);
+	//string_clear(&self->_in->weak_delim);
 	self->_in->embedded_breaks = 0;
 	self->_in->rows = 0;
 	return csv_reader_seek(self, 0);
