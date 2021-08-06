@@ -111,7 +111,7 @@ int csv_write_field(struct csv_writer* self, const struct csv_field* field)
 		}
 	}
 
-	fprintf(self->_in->file, "%.*s", field->len, field->data);
+	fwrite(field->data, 1, field->len, self->_in->file);
 	return field->len;
 }
 
