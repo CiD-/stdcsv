@@ -92,6 +92,10 @@ int sgetline(FILE* f, char** buf, size_t* buflen, size_t* len)
 int sappline_mmap(
         const char* mmap, char** line, size_t* bufidx, size_t* len, size_t limit)
 {
+	if (mmap == NULL) {
+		return EOF;
+	}
+
 	const char* org_line = *line;
 	size_t org_idx = *bufidx;
 
@@ -108,6 +112,9 @@ int sappline_mmap(
 int sgetline_mmap(
         const char* mmap, char** line, size_t* bufidx, size_t* len, size_t limit)
 {
+	if (mmap == NULL) {
+		return EOF;
+	}
 	if (*bufidx == limit) {
 		return EOF;
 	}

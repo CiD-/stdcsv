@@ -669,13 +669,16 @@ int csv_reader_open_mmap(struct csv_reader* self, const char* file_name)
 
 	struct stat sb;
 	csvfail_if_(fstat(self->_in->fd, &sb) == -1, file_name);
-	self->_in->file_size = sb.st_size;
 
-	self->_in->mmap_ptr =
-	        mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, self->_in->fd, 0);
-	csvfail_if_(self->_in->mmap_ptr == MAP_FAILED, "mmap");
+	if (sb.st_size != 0) {
+		self->_in->mmap_ptr =
+		        mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, self->_in->fd, 0);
+		csvfail_if_(self->_in->mmap_ptr == MAP_FAILED, "mmap");
+		csv_reader_madvise(self, MADV_SEQUENTIAL);
+	}
+
+	self->_in->file_size = sb.st_size;
 	self->_in->is_mmap = true;
-	csv_reader_madvise(self, MADV_SEQUENTIAL);
 
 	return CSV_GOOD;
 }
