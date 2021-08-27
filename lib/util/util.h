@@ -13,7 +13,7 @@ extern "C" {
 #include <string.h>
 #include <ctype.h>
 
-#include "queue.h"
+#include "node.h"
 
 typedef void (*generic_data_fn)(void*);
 typedef int (*int_generic_data_fn)(void*);
@@ -48,10 +48,10 @@ typedef int (*int_generic_data_fn)(void*);
 /**
  * strncpy but guaranteed to end with '\0'
  */
-#define strncpy_(dest_, src_, n_)             \
-	{                                     \
-		strncpy(dest_, src_, n_ - 1); \
-		dest_[n_ - 1] = '\0';         \
+#define strncpy_(dest_, src_, n_)         \
+	{                                 \
+		dest_[0] = '\0';          \
+		strncat(dest_, src_, n_); \
 	}
 
 /**
@@ -188,7 +188,7 @@ void string_to_lower(char* s);
  */
 char* strnstr(const char* s, const char* find, size_t slen);
 
-struct queue* dir_list_files(const char* dir);
+struct node* dir_list_files(const char* dir);
 
 #ifdef __cplusplus
 }

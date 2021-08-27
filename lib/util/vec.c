@@ -1,6 +1,6 @@
 #include "vec.h"
 
-#include <limits.h>
+#include <stdint.h>
 #include "util.h"
 
 
@@ -129,8 +129,8 @@ void* vec_add_one(vec* self)
 
 void* vec_add_one_front(vec* self)
 {
+	size_t move_bytes = self->_elem_size * (self->_alloc - 1);
 	vec_add_one(self);
-	size_t move_bytes = self->_elem_size * self->size;
 
 	memmove((char*)self->data + self->_elem_size, self->data, move_bytes);
 	return vec_begin(self);
@@ -167,7 +167,8 @@ void vec_extend(vec* dest, const vec* src)
 void vec_insert_one(vec* self, void* pos, const void* src)
 {
 	vec_add_one(self);
-	size_t move_bytes = self->_elem_size * (self->size - vec_get_idx_(self, pos));
+	size_t move_bytes =
+	        self->_elem_size * ((self->_alloc - 1) - vec_get_idx_(self, pos));
 
 	memmove((char*)pos + self->_elem_size, pos, move_bytes);
 	memcpy(pos, src, self->_elem_size);
@@ -177,16 +178,26 @@ void vec_insert_at(vec* self, size_t idx, const void* data, size_t len)
 {
 	void* pos = vec_at(self, idx);
 	const void* back = (const char*)data + ((len - 1) * self->_elem_size);
-	vec_insert(self, pos, data, back);
+	vec_insert_iter(self, pos, data, back);
 }
 
-void vec_insert(vec* self, void* pos, const void* begin, const void* back)
+void vec_insert(vec* self, void* pos, const void* begin, size_t len)
+{
+	if (len == 0) {
+		return;
+	}
+	const void* back = begin + self->_elem_size * (len - 1);
+	vec_insert_iter(self, pos, begin, back);
+}
+
+void vec_insert_iter(vec* self, void* pos, const void* begin, const void* back)
 {
 	size_t idx = vec_get_idx_(self, pos);
 	size_t iter_size = vec_iter_size_(self, begin, back);
 	size_t iter_bytes = self->_elem_size * iter_size;
-	size_t move_bytes = self->_elem_size * ((self->size + 1) - idx);
+
 	vec_resize(self, self->size + iter_size);
+	size_t move_bytes = self->_elem_size * (self->_alloc - idx - iter_size);
 
 	pos = vec_at(self, idx);
 
@@ -196,19 +207,28 @@ void vec_insert(vec* self, void* pos, const void* begin, const void* back)
 
 void vec_erase_one(vec* self, void* elem)
 {
-	vec_erase(self, elem, elem);
+	vec_erase_iter(self, elem, elem);
 }
 
 void vec_erase_at(vec* self, size_t index, size_t len)
 {
 	void* begin = vec_at(self, index);
 	void* back = vec_at(self, index + len - 1);
-	vec_erase(self, begin, back);
+	vec_erase_iter(self, begin, back);
 }
 
-void vec_erase(vec* self, void* begin, void* back)
+void vec_erase(vec* self, void* begin, size_t len)
 {
-	size_t bytes = (char*)vec_end(self) - (const char*)back;
+	if (len == 0) {
+		return;
+	}
+	void* back = begin + self->_elem_size * (len - 1);
+	vec_erase_iter(self, begin, back);
+}
+
+void vec_erase_iter(vec* self, void* begin, void* back)
+{
+	size_t bytes = (const char*)vec_at(self, self->_alloc - 1) - (const char*)back;
 	self->size -= vec_iter_size_(self, begin, back);
 	memmove(begin, (char*)back + self->_elem_size, bytes);
 }
@@ -216,4 +236,78 @@ void vec_erase(vec* self, void* begin, void* back)
 void vec_sort_r(vec* self, qsort_r_cmp_fn cmp__, void* context)
 {
 	qsort_r(self->data, self->size, self->_elem_size, cmp__, context);
+}
+
+
+bitvec* bitvec_construct(bitvec* self)
+{
+	vec_construct_(self, uint32_t);
+	memset(self->data, 0, self->_elem_size * self->_alloc);
+	return self;
+}
+
+void bitvec_destroy(bitvec* self)
+{
+	vec_destroy(self);
+}
+
+bool bitvec_at(const bitvec* self, size_t idx)
+{
+	uint32_t* num = vec_at(self, idx / 32);
+	uint8_t offset = idx % 32;
+	return (*num >> offset) & 1;
+}
+
+void bitvec_set(bitvec* self, size_t idx, bool newval)
+{
+	uint32_t* num = vec_at(self, idx / 32);
+	uint32_t offset = idx % 32;
+	if (newval) {
+		*num |= (1 << offset);
+	} else {
+		*num &= ~(1 << offset);
+	}
+}
+
+void bitvec_reserve(bitvec* self, size_t size)
+{
+	size_t alloc = size / 32 + 1;
+	if (self->_alloc >= ++alloc) {
+		return;
+	}
+	void* new_dest_ = realloc(self->data, alloc * self->_elem_size);
+	if (!new_dest_) {
+		perror("realloc");
+		exit(EXIT_FAILURE);
+	}
+	self->data = new_dest_;
+	new_dest_ = NULL;
+	self->_alloc = alloc;
+}
+
+void bitvec_resize(bitvec* self, size_t size)
+{
+	size_t org_size = self->size / 32 + 1;
+	size_t org_alloc = self->_alloc;
+
+	if (size > self->size) {
+		bitvec_reserve(self, size);
+	}
+	self->size = size;
+
+	if (org_alloc == self->_alloc) {
+		return;
+	}
+	void* new_shit = vec_at(self, org_size);
+	size_t new_shit_size = self->_alloc - org_size;
+	memset(new_shit, 0, new_shit_size * self->_elem_size);
+}
+
+void bitvec_push_back(bitvec* self, bool val)
+{
+	if (++self->size > (self->_alloc - 1) * 32) {
+		bitvec_reserve(self, self->size * 2);
+	}
+
+	bitvec_set(self, self->size - 1, val);
 }

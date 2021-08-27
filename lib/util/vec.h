@@ -26,9 +26,9 @@
 #include <stdbool.h>
 
 struct vec {
-	void* data;        /* the data */
+	void* data;        /* the stuff */
 	size_t size;       /* number of elements populated */
-	size_t _alloc;     /* number of allocated elements */
+	size_t _alloc;     /* number of elements allocated */
 	size_t _elem_size; /* size of a single element */
 };
 typedef struct vec vec;
@@ -57,13 +57,15 @@ void* vec_add_one_front(struct vec*);
 void vec_set(struct vec*, size_t, const void*);
 void vec_push_back(struct vec*, const void*);
 
+void vec_insert_iter(struct vec*, void* pos, const void* begin, const void* back);
 void vec_insert_one(struct vec*, void* pos, const void* elem);
 void vec_insert_at(struct vec*, size_t idx, const void* data, size_t len);
-void vec_insert(struct vec*, void* pos, const void* begin, const void* back);
+void vec_insert(struct vec*, void* pos, const void* begin, size_t len);
 
+void vec_erase_iter(struct vec*, void* begin, void* back);
 void vec_erase_one(struct vec*, void* elem);
 void vec_erase_at(struct vec*, size_t idx, size_t len);
-void vec_erase(struct vec*, void* begin, void* back);
+void vec_erase(struct vec*, void* begin, size_t len);
 
 void vec_append(struct vec*, const void* src, size_t);
 void vec_extend(struct vec* dest, const struct vec* src);
@@ -74,5 +76,13 @@ void vec_sort_r(struct vec*, qsort_r_cmp_fn, void* context);
 	(((const char*)back_ - (const char*)begin_) / v_->_elem_size) + 1
 
 #define vec_get_idx_(v_, pos_) vec_iter_size_(v_, vec_begin(v_), pos_) - 1
+
+typedef struct vec bitvec;
+bitvec* bitvec_construct(bitvec*);
+void bitvec_destroy(bitvec*);
+void bitvec_resize(bitvec*, size_t);
+bool bitvec_at(const bitvec*, size_t idx);
+void bitvec_set(bitvec*, size_t idx, bool);
+void bitvec_push_back(bitvec*, bool);
 
 #endif /* VEC_H */

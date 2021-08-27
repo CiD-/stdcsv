@@ -58,6 +58,6 @@ void tmp_removeall()
 	while (_tmp_file_head) {
 		string* tmp = queue_dequeue(&_tmp_file_head);
 		tmp_remove_file(string_c_str(tmp));
-		delete_(string, tmp);
+		//delete_(string, tmp);
 	}
 }
