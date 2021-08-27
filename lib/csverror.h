@@ -2,7 +2,7 @@
 #define CSV_ERROR_H
 
 #include "csv.h"
-#include "util/queue.h"
+#include "util/node.h"
 
 #define csvfail_if_(condition, errmsg)                       \
 	{                                                    \
@@ -25,8 +25,8 @@
 		}                                            \
 	}
 
-void err_remove(struct queue* node);
-struct queue* err_push(const char*);
+void err_remove(struct node* node);
+struct node* err_push(const char*);
 void err_printall();
 
 #endif /* CSV_ERROR_H */

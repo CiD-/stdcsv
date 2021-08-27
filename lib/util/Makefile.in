@@ -103,7 +103,7 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libutil_la_LIBADD =
-am_libutil_la_OBJECTS = util.lo queue.lo vec.lo stringy.lo \
+am_libutil_la_OBJECTS = util.lo node.lo vec.lo stringy.lo \
 	stringview.lo
 libutil_la_OBJECTS = $(am_libutil_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -125,7 +125,7 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/queue.Plo ./$(DEPDIR)/stringview.Plo \
+am__depfiles_remade = ./$(DEPDIR)/node.Plo ./$(DEPDIR)/stringview.Plo \
 	./$(DEPDIR)/stringy.Plo ./$(DEPDIR)/util.Plo \
 	./$(DEPDIR)/vec.Plo
 am__mv = mv -f
@@ -299,7 +299,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 noinst_LTLIBRARIES = libutil.la
 libutil_la_SOURCES = util.h util.c \
-		queue.h queue.c \
+		node.h node.c \
 		vec.h vec.c \
 		stringy.h stringy.c \
 		stringview.h stringview.c
@@ -358,7 +358,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/queue.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/node.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stringview.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stringy.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Plo@am__quote@ # am--include-marker
@@ -522,7 +522,7 @@ clean-am: clean-generic clean-libtool clean-noinstLTLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/queue.Plo
+		-rm -f ./$(DEPDIR)/node.Plo
 	-rm -f ./$(DEPDIR)/stringview.Plo
 	-rm -f ./$(DEPDIR)/stringy.Plo
 	-rm -f ./$(DEPDIR)/util.Plo
@@ -572,7 +572,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/queue.Plo
+		-rm -f ./$(DEPDIR)/node.Plo
 	-rm -f ./$(DEPDIR)/stringview.Plo
 	-rm -f ./$(DEPDIR)/stringy.Plo
 	-rm -f ./$(DEPDIR)/util.Plo

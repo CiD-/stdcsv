@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "util/queue.h"
+#include "util/node.h"
 #include "util/vec.h"
 #include "util/stringy.h"
 
@@ -43,7 +43,7 @@ struct csv_read_internal {
 
 struct csv_write_internal {
 	FILE* file;
-	queue* tmp_node;
+	node* tmp_node;
 	string tempname;
 	string filename;
 	string buffer;
