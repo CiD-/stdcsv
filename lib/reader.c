@@ -253,9 +253,10 @@ int csv_lowerstandard(struct csv_reader* self)
 	}
 
 	--self->quotes;
-	self->_in->rows = 0;
-	self->_in->embedded_breaks = 0;
-	fseek(self->_in->file, 0, SEEK_SET);
+	//self->_in->rows = 0;
+	//self->_in->embedded_breaks = 0;
+	//fseek(self->_in->file, 0, SEEK_SET);
+	csv_reader_reset(self);
 
 	return CSV_RESET;
 }
@@ -697,6 +698,8 @@ int csv_reader_seek(struct csv_reader* self, size_t offset)
 {
 	csvfail_if_(offset > self->_in->file_size, "offset out of range");
 
+	self->offset = offset;
+
 	if (self->_in->is_mmap) {
 		self->_in->offset = offset;
 		return CSV_GOOD;
@@ -730,10 +733,9 @@ int csv_reader_close(struct csv_reader* self)
 
 int csv_reader_reset(struct csv_reader* self)
 {
-	self->normal = self->_in->normorg;
-	//string_clear(&self->_in->delim);
-	//string_clear(&self->_in->weak_delim);
-	self->_in->embedded_breaks = 0;
 	self->_in->rows = 0;
+	self->_in->embedded_breaks = 0;
+	self->normal = self->_in->normorg;
+
 	return csv_reader_seek(self, 0);
 }
