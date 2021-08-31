@@ -28,7 +28,7 @@ struct csv_read_internal {
 	string weak_delim;
 	string embedded_break;
 	char* mmap_ptr;
-	size_t mmap_offset;
+	size_t offset;
 	size_t file_size;
 	int fd;
 

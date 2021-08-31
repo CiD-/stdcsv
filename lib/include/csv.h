@@ -57,6 +57,7 @@ struct csv_record {
  */
 struct csv_reader {
 	struct csv_read_internal* _in;
+	size_t offset;
 	enum quote_style quotes;
 	int normal;
 	_Bool failsafe_mode;

@@ -82,6 +82,7 @@ struct csv_reader* csv_reader_construct(struct csv_reader* reader)
 	init_sig();
 	*reader = (struct csv_reader) {
 	        NULL,          /* internal */
+	        0,             /* offset */
 	        QUOTE_RFC4180, /* quotes */
 	        0,             /* Normal */
 	        false,         /* failsafe_mode */
@@ -95,7 +96,7 @@ struct csv_reader* csv_reader_construct(struct csv_reader* reader)
 	        {0},   /* weak_delim */
 	        {0},   /* embedded_breaks */
 	        NULL,  /* mmap_ptr */
-	        0,     /* mmap_offset */
+	        0,     /* offset */
 	        0,     /* file_size */
 	        0,     /* fd */
 	        0,     /* rows */
@@ -190,20 +191,22 @@ int csv_get_record_to(struct csv_reader* self,
 	if (self->_in->is_mmap) {
 		ret = sgetline_mmap(self->_in->mmap_ptr,
 		                    &rec->rec,
-		                    &self->_in->mmap_offset,
+		                    &self->_in->offset,
 		                    &rec->reclen,
 		                    self->_in->file_size);
+		self->offset = self->_in->offset;
 	} else {
 		ret = sgetline(self->_in->file,
 		               &rec->rec,
 		               &rec->_in->rec_alloc,
 		               &rec->reclen);
+		if (self->_in->file != stdin) {
+			self->offset = ftello(self->_in->file);
+		}
 	}
 
 	if (ret == EOF) {
 		self->normal = self->_in->normorg;
-		//if (csv_reader_close(self) == CSV_FAIL)
-		//	csv_perror();
 		return ret;
 	}
 
@@ -361,7 +364,7 @@ int csv_append_line(struct csv_reader* self, struct csv_record* rec)
 	if (self->_in->is_mmap) {
 		ret = sappline_mmap(self->_in->mmap_ptr,
 		                    &rec->rec,
-		                    &self->_in->mmap_offset,
+		                    &self->_in->offset,
 		                    &rec->reclen,
 		                    self->_in->file_size);
 	} else {
@@ -695,7 +698,7 @@ int csv_reader_seek(struct csv_reader* self, size_t offset)
 	csvfail_if_(offset > self->_in->file_size, "offset out of range");
 
 	if (self->_in->is_mmap) {
-		self->_in->mmap_offset = offset;
+		self->_in->offset = offset;
 		return CSV_GOOD;
 	}
 
