@@ -189,6 +189,14 @@ int csv_get_record_to(struct csv_reader* self,
 {
 	int ret = 0;
 	if (self->_in->is_mmap) {
+		/* sgetline allocates memory into rec, and sgetline_mmap
+		 * references an mmaped file. If a record was used on
+		 * sgetline first, it will have allocated memory in 
+		 * rec->rec.  Free that first. */
+		if (rec->_in->rec_alloc > 0) {
+			rec->_in->rec_alloc = 0;
+			free_(rec->rec);
+		}
 		ret = sgetline_mmap(self->_in->mmap_ptr,
 		                    &rec->rec,
 		                    &self->_in->offset,
