@@ -158,6 +158,8 @@ int csv_writer_mktmp(struct csv_writer* self)
 	}
 
 	int fd = mkstemp(self->_in->tempname.data);
+	csvfail_if_(fd == -1, string_c_str(&self->_in->tempname));
+
 	self->_in->file = fdopen(fd, "w");
 	csvfail_if_(!self->_in->file, string_c_str(&self->_in->tempname));
 
