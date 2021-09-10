@@ -30,7 +30,7 @@ AS_IF([test "x$DOXYGEN" = "x"],
       [AC_MSG_WARN([Doxygen not found - continuing without Doxygen support])],
       [AC_CONFIG_FILES([lib/docs/Makefile])])
 
-AM_CONDITIONAL([USE_DOXYGEN],[test -n "$DOXYGEN"])
+AM_CONDITIONAL([USE_DOXYGEN],[test "x$DOXYGEN" != "x"])
 AM_COND_IF([USE_DOXYGEN], [AC_CONFIG_FILES([lib/docs/Doxyfile])])
 
 AC_OUTPUT
