@@ -1,4 +1,8 @@
-SUBDIRS = util docs
+SUBDIRS = util
+
+if USE_DOXYGEN
+SUBDIRS += docs
+endif
 
 AM_CPPFLAGS = -Iinclude -Iutil
 include_HEADERS = include/csv.h
