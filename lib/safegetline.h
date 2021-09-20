@@ -14,12 +14,18 @@
  *      - -2 if buflen is reached before new line is found.
  *      - EOF if Failed read
  */
-int sappline(FILE*, char** buf, size_t* buflen, size_t* linelen);
-int sgetline(FILE*, char** buf, size_t* buflen, size_t* linelen);
+int sappline(FILE*, char** buf, size_t* restrict buflen, size_t* restrict linelen);
+int sgetline(FILE*, char** buf, size_t* restrict buflen, size_t* restrict linelen);
 
-int sappline_mmap(
-        const char* mmap, char** line, size_t* bufidx, size_t* len, size_t limit);
-int sgetline_mmap(
-        const char* mmap, char** line, size_t* bufidx, size_t* len, size_t limit);
+int sappline_mmap(const char* mmap,
+                  char** line,
+                  size_t* restrict bufidx,
+                  size_t* restrict len,
+                  size_t limit);
+int sgetline_mmap(const char* mmap,
+                  char** line,
+                  size_t* restrict bufidx,
+                  size_t* restrict len,
+                  size_t limit);
 
 #endif

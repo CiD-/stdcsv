@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-int _safegetline(FILE* fp, char* buffer, size_t* buflen, size_t* off)
+int _safegetline(FILE* fp, char* buffer, size_t* restrict buflen, size_t* off)
 {
 	char* end = buffer + *buflen - 1;
 	char* dst = buffer + *off;
@@ -48,7 +48,8 @@ int _safegetline(FILE* fp, char* buffer, size_t* buflen, size_t* off)
 	return 0;
 }
 
-int _getline_runner(FILE* f, char** buf, size_t* buflen, size_t* len, size_t off)
+int _getline_runner(
+        FILE* f, char** buf, size_t* restrict buflen, size_t* restrict len, size_t off)
 {
 	size_t offset = off;
 	int ret = 0;
@@ -64,7 +65,7 @@ int _getline_runner(FILE* f, char** buf, size_t* buflen, size_t* len, size_t off
 	return ret;
 }
 
-int sappline(FILE* f, char** buf, size_t* buflen, size_t* len)
+int sappline(FILE* f, char** buf, size_t* restrict buflen, size_t* restrict len)
 {
 	if (*len + 1 > *buflen) {
 		increase_buffer(buf, buflen);
@@ -76,7 +77,7 @@ int sappline(FILE* f, char** buf, size_t* buflen, size_t* len)
 	return _getline_runner(f, buf, buflen, len, *len);
 }
 
-int sgetline(FILE* f, char** buf, size_t* buflen, size_t* len)
+int sgetline(FILE* f, char** buf, size_t* restrict buflen, size_t* restrict len)
 {
 	return _getline_runner(f, buf, buflen, len, 0);
 }
@@ -89,8 +90,11 @@ int sgetline(FILE* f, char** buf, size_t* buflen, size_t* len)
  * *LAZY*
  */
 
-int sappline_mmap(
-        const char* mmap, char** line, size_t* bufidx, size_t* len, size_t limit)
+int sappline_mmap(const char* mmap,
+                  char** line,
+                  size_t* restrict bufidx,
+                  size_t* restrict len,
+                  size_t limit)
 {
 	if (mmap == NULL) {
 		return EOF;
@@ -109,8 +113,11 @@ int sappline_mmap(
 	return 0;
 }
 
-int sgetline_mmap(
-        const char* mmap, char** line, size_t* bufidx, size_t* len, size_t limit)
+int sgetline_mmap(const char* mmap,
+                  char** line,
+                  size_t* restrict bufidx,
+                  size_t* restrict len,
+                  size_t limit)
 {
 	if (mmap == NULL) {
 		return EOF;

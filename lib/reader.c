@@ -147,10 +147,9 @@ const char* csv_reader_get_delim(struct csv_reader* self)
 size_t csv_reader_get_file_size(struct csv_reader* self)
 {
 	if (self->_in->is_mmap || (self->_in->file && self->_in->file != stdin)) {
-		return 0;
+		return self->_in->file_size;
 	}
-
-	return self->_in->file_size;
+	return 0;
 }
 
 /**
@@ -314,8 +313,6 @@ int csv_nparse_to(struct csv_reader* self,
 		csv_determine_delimiter(self, line, byte_limit);
 
 	rec->size = 0;
-	//rec->rec = NULL;
-	//rec->reclen = 0;
 	size_t recidx = 0;
 	int ret = 0;
 
