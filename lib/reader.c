@@ -81,28 +81,28 @@ struct csv_reader* csv_reader_construct(struct csv_reader* reader)
 {
 	init_sig();
 	*reader = (struct csv_reader) {
-	        NULL,          /* internal */
-	        0,             /* offset */
-	        QUOTE_RFC4180, /* quotes */
-	        0,             /* Normal */
-	        false,         /* failsafe_mode */
-	        false          /* trim */
+	        ._in = NULL,
+	        .offset = 0,
+	        .quotes = QUOTE_RFC4180,
+	        .normal = 0,
+	        .failsafe_mode = false,
+	        .trim = false,
 	};
 
 	reader->_in = malloc_(sizeof(*reader->_in));
 	*reader->_in = (struct csv_read_internal) {
-	        stdin, /* file */
-	        {0},   /* delim */
-	        {0},   /* weak_delim */
-	        {0},   /* embedded_breaks */
-	        NULL,  /* mmap_ptr */
-	        0,     /* offset */
-	        0,     /* file_size */
-	        0,     /* fd */
-	        0,     /* rows */
-	        0,     /* embedded_breaks */
-	        0,     /* normorg */
-	        false  /* is_mmap */
+	        .file = stdin,
+	        .delim = {0},
+	        .weak_delim = {0},
+	        .embedded_break = {0},
+	        .mmap_ptr = NULL,
+	        .offset = 0,
+	        .file_size = 0,
+	        .fd = 0,
+	        .rows = 0,
+	        .embedded_breaks = 0,
+	        .normorg = 0,
+	        .is_mmap = false,
 	};
 
 	string_construct(&reader->_in->delim);

@@ -20,21 +20,21 @@ struct csv_writer* csv_writer_construct(struct csv_writer* self)
 	init_sig();
 
 	*self = (struct csv_writer) {
-	        NULL,         /* _in */
+	        ._in = NULL,
 	        QUOTE_RFC4180 /* quotes */
 	};
 
 	self->_in = malloc_(sizeof(*self->_in));
 	*self->_in = (struct csv_write_internal) {
-	        stdout, /* file */
-	        NULL,   /* tmp_node */
-	        {0},    /* tempname */
-	        {0},    /* filename */
-	        {0},    /* buffer */
-	        {0},    /* delim */
-	        {0},    /* rec_terminator */
-	        0,      /* record_len */
-	        false   /* is_detached */
+	        .file = stdout,
+	        .tmp_node = NULL,
+	        .tempname = {0},
+	        .filename = {0},
+	        .buffer = {0},
+	        .delim = {0},
+	        .rec_terminator = {0},
+	        .reclen = 0,
+	        .is_detached = false,
 	};
 
 	string_construct(&self->_in->tempname);

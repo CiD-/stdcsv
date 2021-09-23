@@ -26,19 +26,19 @@ struct csv_record* csv_record_new()
 struct csv_record* csv_record_construct(struct csv_record* self)
 {
 	*self = (struct csv_record) {
-	        NULL, /* _in */
-	        NULL, /* fields */
-	        NULL, /* rec */
-	        0,    /* reclen */
-	        0,    /* size */
+	        ._in = NULL,
+	        .fields = NULL,
+	        .rec = NULL,
+	        .reclen = 0,
+	        .size = 0,
 	};
 
 	self->_in = malloc_(sizeof(*self->_in));
 	*self->_in = (struct csv_record_internal) {
-	        new_t_(vec, string),           /* field_data */
-	        new_t_(vec, struct csv_field), /* _fields */
-	        0,                             /* rec_alloc */
-	        0,                             /* allocated */
+	        .field_data = new_t_(vec, string),
+	        ._fields = new_t_(vec, struct csv_field),
+	        .rec_alloc = 0,
+	        .field_alloc = 0,
 	};
 
 	return self;
@@ -80,19 +80,19 @@ struct csv_record* csv_record_clone(const struct csv_record* src)
 	dest = malloc_(sizeof(*dest));
 
 	*dest = (struct csv_record) {
-	        NULL,        /* _in */
-	        NULL,        /* fields */
-	        src->rec,    /* rec */
-	        src->reclen, /* reclen */
-	        src->size,   /* size */
+	        ._in = NULL,
+	        .fields = NULL,
+	        .rec = src->rec,
+	        .reclen = src->reclen,
+	        .size = src->size,
 	};
 
 	dest->_in = malloc_(sizeof(*dest->_in));
 	*dest->_in = (struct csv_record_internal) {
-	        new_t_(vec, string),           /* field_data */
-	        new_t_(vec, struct csv_field), /* _fields */
-	        0,                             /* rec_alloc */
-	        src->size,                     /* allocated */
+	        .field_data = new_t_(vec, string),
+	        ._fields = new_t_(vec, struct csv_field),
+	        .rec_alloc = 0,
+	        .field_alloc = src->size,
 	};
 
 	vec_resize(dest->_in->_fields, src->size);

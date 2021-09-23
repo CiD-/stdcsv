@@ -3,6 +3,8 @@
 
 #ifdef __cplusplus
 extern "C" {
+#else
+#include <stdbool.h>
 #endif
 
 #define CSV_GOOD          0
@@ -60,8 +62,8 @@ struct csv_reader {
 	size_t offset;
 	enum quote_style quotes;
 	int normal;
-	_Bool failsafe_mode;
-	_Bool trim;
+	bool failsafe_mode;
+	bool trim;
 };
 
 struct csv_writer {
