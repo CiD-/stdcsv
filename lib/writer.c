@@ -167,6 +167,18 @@ int csv_writer_mktmp(struct csv_writer* self)
 	return CSV_GOOD;
 }
 
+const char* csv_writer_export_tmp(struct csv_writer* self)
+{
+	if (string_empty(&self->_in->tempname)) {
+		return NULL;
+	}
+
+	/* Ensure the temp file is not removed */
+	tmp_remove_node(self->_in->tmp_node);
+
+	return string_c_str(&self->_in->tempname);
+}
+
 int csv_writer_isopen(struct csv_writer* self)
 {
 	return (self->_in->file && self->_in->file != stdout);

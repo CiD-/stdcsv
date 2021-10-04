@@ -290,6 +290,13 @@ void csv_writer_set_filename(struct csv_writer*, const char*);
 int csv_writer_mktmp(struct csv_writer*);
 
 /**
+ * If you would like the temp file to no be deleted
+ * you can export it. This will return the name of
+ * the temp file.
+ */
+const char* csv_writer_export_tmp(struct csv_writer*);
+
+/**
  * If we are writing to a file, close and re-open
  * the file for writing.
  */
