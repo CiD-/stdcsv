@@ -120,6 +120,7 @@ void csv_reader_free(struct csv_reader* self)
 
 void csv_reader_destroy(struct csv_reader* self)
 {
+	csv_perror();
 	string_destroy(&self->_in->delim);
 	string_destroy(&self->_in->weak_delim);
 	string_destroy(&self->_in->embedded_break);

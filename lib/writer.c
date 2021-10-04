@@ -54,6 +54,12 @@ void csv_writer_free(struct csv_writer* self)
 
 void csv_writer_destroy(struct csv_writer* self)
 {
+	csv_perror();
+
+	if (csv_writer_isopen(self)) {
+		fclose(self->_in->file);
+	}
+
 	/* Writer was not closed or temp file
 	 * is_detached. Either way, the temp file
 	 * still exists.
@@ -167,7 +173,7 @@ int csv_writer_mktmp(struct csv_writer* self)
 	return CSV_GOOD;
 }
 
-const char* csv_writer_export_tmp(struct csv_writer* self)
+char* csv_writer_export_tmp(struct csv_writer* self)
 {
 	if (string_empty(&self->_in->tempname)) {
 		return NULL;
@@ -175,8 +181,9 @@ const char* csv_writer_export_tmp(struct csv_writer* self)
 
 	/* Ensure the temp file is not removed */
 	tmp_remove_node(self->_in->tmp_node);
+	self->_in->tmp_node = NULL;
 
-	return string_c_str(&self->_in->tempname);
+	return string_export(&self->_in->tempname);
 }
 
 int csv_writer_isopen(struct csv_writer* self)

@@ -45,8 +45,9 @@ node* tmp_push(void* tmp_file)
 
 void tmp_remove_node(node* node)
 {
-	string* tmp = node_remove(&_tmp_file_head, node);
-	string_clear(tmp);
+	node_remove(&_tmp_file_head, node);
+	//string* tmp = node_remove(&_tmp_file_head, node);
+	//string_clear(tmp);
 }
 
 void tmp_remove_file(const char* tmp_file)
