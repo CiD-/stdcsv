@@ -1,4 +1,4 @@
-##libcsv
+## libcsv
 
 This is a simple, fast library for parsing delimited data.  Utilizing fail-safe mode (slower),
 libcsv can even parse malformed data that does not adhere to [RFC 4180](https://www.ietf.org/rfc/rfc4180.txt). 
@@ -17,7 +17,7 @@ make check # optional
 make install
 ```
 
-###Installs
+### Installs
 Program: stdcsv
 Library: libcsv.so
 
