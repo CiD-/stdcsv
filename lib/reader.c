@@ -81,28 +81,13 @@ struct csv_reader* csv_reader_construct(struct csv_reader* reader)
 {
 	init_sig();
 	*reader = (struct csv_reader) {
-	        ._in = NULL,
-	        .offset = 0,
 	        .quotes = QUOTE_RFC4180,
-	        .normal = 0,
-	        .failsafe_mode = false,
-	        .trim = false,
 	};
 
 	reader->_in = malloc_(sizeof(*reader->_in));
 	*reader->_in = (struct csv_read_internal) {
 	        .file = stdin,
-	        .delim = {0},
-	        .weak_delim = {0},
-	        .embedded_break = {0},
-	        .mmap_ptr = NULL,
-	        .offset = 0,
-	        .file_size = 0,
-	        .fd = 0,
-	        .rows = 0,
-	        .embedded_breaks = 0,
-	        .normorg = 0,
-	        .is_mmap = false,
+	        .fd = -1,
 	};
 
 	string_construct(&reader->_in->delim);
@@ -733,8 +718,14 @@ int csv_reader_close(struct csv_reader* self)
 		if (self->_in->mmap_ptr != NULL) {
 			csvfail_if_(munmap(self->_in->mmap_ptr, self->_in->file_size),
 			            "munmap");
+			self->_in->mmap_ptr = NULL;
 		}
-		csvfail_if_(close(self->_in->fd), "close");
+		/* how this could be false? I don't know... */
+		if (self->_in->fd != -1) {
+			csvfail_if_(close(self->_in->fd), "close");
+			self->_in->fd = -1;
+		}
+
 	} else if (self->_in->file && self->_in->file != stdin) {
 		csvfail_if_(fclose(self->_in->file), "fclose");
 	}
