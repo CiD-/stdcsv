@@ -729,7 +729,11 @@ int csv_reader_close(struct csv_reader* self)
 {
 	if (self->_in->is_mmap) {
 		self->_in->is_mmap = false;
-		csvfail_if_(munmap(self->_in->mmap_ptr, self->_in->file_size), "munmap");
+		/* If the file was 0 size, we didn't map anything... */
+		if (self->_in->mmap_ptr != NULL) {
+			csvfail_if_(munmap(self->_in->mmap_ptr, self->_in->file_size),
+			            "munmap");
+		}
 		csvfail_if_(close(self->_in->fd), "close");
 	} else if (self->_in->file && self->_in->file != stdin) {
 		csvfail_if_(fclose(self->_in->file), "fclose");
