@@ -256,8 +256,10 @@ int csv_lowerstandard(struct csv_reader* self)
 
 void csv_append_empty_field(struct csv_record* self)
 {
-	if (++(self->size) > (int)self->_in->field_alloc)
+	if (self->size + 1 > (int)self->_in->field_alloc)
 		csv_record_grow(self);
+
+	self->fields[self->size++].len = 0;
 }
 
 int csv_parse(struct csv_reader* self, struct csv_record* rec, const char* line)
